@@ -21,5 +21,6 @@ for(const [route,title,label] of cases)test(`${title}: CRUD, search, filter, per
  await page.getByLabel('Filter op status').selectOption('');
  page.once('dialog',d=>d.dismiss());await page.getByRole('button',{name:'Verwijderen',exact:true}).click();await expect(page.getByRole('heading',{name:'Gewijzigd',exact:true})).toBeVisible();
  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Verwijderen',exact:true}).click();
+ await expect(page.getByRole('article')).toHaveCount(0);
  await page.reload();await expect(page.getByText('Nog geen registraties')).toBeVisible();
 });
