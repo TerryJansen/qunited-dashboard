@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { modules, reference } from './modules';
-import { runsOn, isoToday } from './alerts';
-import { number, money, formatDate, formatDateLong } from './format';
+import { runsOn, isoToday, shiftDays } from './alerts';
+import { number, money, formatDate, formatDateLong, plural } from './format';
+import Chart from './Chart';
 
 const hours = rows => rows.reduce((sum, r) => sum + Math.round(Number(r.hours) * 100), 0) / 100;
 
@@ -16,14 +17,15 @@ function downloadCsv(filename, table) {
  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-function Summary({ title, columns, rows }) {
- return <section className="record">
-  <h2>{title}</h2>
-  <table aria-label={title}>
-   <thead><tr><th>{columns[0]}</th><th>{columns[1]}</th></tr></thead>
-   <tbody>{rows.map(([key, value]) => <tr key={key}><td>{key}</td><td>{number(value)}</td></tr>)}</tbody>
-  </table>
-  {!rows.length && <p className="muted">Geen gegevens.</p>}
+function Summary({ title, columns, rows, format = number }) {
+ return <section className="panel">
+  <header><h2>{title}</h2></header>
+  {rows.length
+   ? <table aria-label={title}>
+    <thead><tr><th>{columns[0]}</th><th className="n">{columns[1]}</th></tr></thead>
+    <tbody>{rows.map(([key, value]) => <tr key={key}><td>{key}</td><td className="n num">{format(value)}</td></tr>)}</tbody>
+   </table>
+   : <div className="empty"><p>Geen gegevens in deze selectie.</p></div>}
  </section>;
 }
 
@@ -36,7 +38,27 @@ export default function Reports({ data }) {
   (!from || r.date >= from) && (!to || r.date <= to) && (!project || r.projectId === project) && (!employee || r.employeeId === employee));
 
  const grouped = (key, records) => [...new Set(rows.map(r => r[key]))]
-  .map(id => [reference(records, id), hours(rows.filter(r => r[key] === id))]);
+  .map(id => [reference(records, id), hours(rows.filter(r => r[key] === id))])
+  .sort((a, b) => b[1] - a[1]);
+
+ // Per week schrijven tegenover de optelsom: dezelfde x-as, gelijke breedte.
+ const weeks = (() => {
+  const dates = rows.map(r => r.date).filter(Boolean).sort();
+  if (!dates.length) return { labels: [], perWeek: [], running: [] };
+  const first = dates[0], start = shiftDays(first, -((new Date(`${first}T00:00:00Z`).getUTCDay() + 6) % 7));
+  const labels = [], perWeek = [], running = [];
+  let total = 0;
+  for (let week = 0; ; week += 1) {
+   const open = shiftDays(start, week * 7), close = shiftDays(start, week * 7 + 6);
+   if (open > dates.at(-1)) break;
+   const inWeek = hours(rows.filter(r => r.date >= open && r.date <= close));
+   total = Math.round((total + inWeek) * 100) / 100;
+   labels.push(`${open.slice(8, 10)}-${open.slice(5, 7)}`);
+   perWeek.push(inWeek); running.push(total);
+   if (week > 103) break;
+  }
+  return { labels, perWeek, running };
+ })();
 
  const iso = isoToday();
  const running = data.inzet.filter(record => runsOn(record, iso));
@@ -45,6 +67,7 @@ export default function Reports({ data }) {
   return {
    id: person.id,
    name: person.name,
+   role: person.role || '',
    projects: assignments.map(record => reference(data.projecten, record.projectId)),
    until: assignments.map(record => record.end).filter(Boolean).sort()[0] || '',
   };
@@ -66,17 +89,17 @@ export default function Reports({ data }) {
  }
 
  return <>
-  <div className="heading">
+  <div className="title-row">
    <div>
     <h1>Rapportages</h1>
-    <p>Overzichten op basis van je eigen lokale registraties.</p>
+    <p className="sub">De filters hieronder gelden voor de uren en de uren-CSV; bezetting en werkruimteoverzicht tellen alle registraties.</p>
    </div>
-   <button className="primary" disabled={!rows.length || invalid} onClick={downloadHours}>Download uren CSV</button>
+   <div className="title-actions">
+    <button className="primary" disabled={!rows.length || invalid} onClick={downloadHours}>Download uren CSV</button>
+   </div>
   </div>
 
-  <h2>Urenoverzicht</h2>
-  <p className="muted">Filters gelden alleen voor uren en de uren-CSV. Alle interne statussen tellen mee. Datums zijn inclusief.</p>
-  <div className="filters report-filters">
+  <div className="toolbar report-filters">
    <label>Vanaf<input type="date" value={from} onChange={e => setFrom(e.target.value)} /></label>
    <label>Tot en met<input type="date" value={to} onChange={e => setTo(e.target.value)} /></label>
    <label>Projectfilter
@@ -94,48 +117,72 @@ export default function Reports({ data }) {
    <button onClick={() => { setFrom(''); setTo(''); setProject(''); setEmployee(''); }}>Filters wissen</button>
   </div>
   {invalid && <p role="alert" className="error">Einddatum mag niet vóór de begindatum liggen.</p>}
-  <section className="metric-grid">
-   <div className="metric"><span>Totaal uren in selectie</span><strong data-testid="hours-total">{number(hours(rows))}</strong></div>
-   <div className="metric"><span>Urenregistraties in selectie</span><strong>{rows.length}</strong></div>
+
+  <section className="kpis" aria-label="Uren in selectie">
+   <div className="kpi">
+    <span className="kpi-label">Totaal uren in selectie</span>
+    <strong className="kpi-value" data-testid="hours-total">{number(hours(rows))}</strong>
+    <p className="kpi-note">{from || to ? `${from ? formatDate(from) : 'begin'} tot en met ${to ? formatDate(to) : 'nu'}` : 'alle datums'}</p>
+   </div>
+   <div className="kpi">
+    <span className="kpi-label">Urenregistraties in selectie</span>
+    <strong className="kpi-value">{number(rows.length)}</strong>
+    <p className="kpi-note">van {plural(data.urenstaten.length, 'registratie', 'registraties')} in totaal</p>
+   </div>
+   <div className="kpi">
+    <span className="kpi-label">Openstaande facturen</span>
+    <strong className="kpi-value" data-testid="report-invoices">{money(data.facturatie.filter(r => r.status === 'Open').reduce((sum, r) => sum + Math.round(Number(r.amount) * 100), 0) / 100)}</strong>
+    <p className="kpi-note">alle registraties, los van de filters</p>
+   </div>
   </section>
-  {!rows.length && <p className="empty">Geen uren voor deze selectie.</p>}
-  <div className="report-grid">
+
+  <div className="report-pair">
+   <section className="panel">
+    <div className="chart-head"><h3>Uren per week</h3><span className="meta">in de selectie</span></div>
+    {weeks.labels.length
+     ? <Chart label="Uren per week" deps={[JSON.stringify(weeks)]}
+      draw={(Charts, host) => Charts.bars(host, { labels: weeks.labels, values: weeks.perWeek, format: Charts.fmt.dec(1), height: 190 })} />
+     : <div className="empty"><p>Geen uren voor deze selectie.</p></div>}
+   </section>
+   <section className="panel">
+    <div className="chart-head"><h3>Uren opgeteld</h3><span className="meta">zelfde weken</span></div>
+    {weeks.labels.length
+     ? <Chart label="Uren opgeteld" deps={[JSON.stringify(weeks)]}
+      draw={(Charts, host) => Charts.line(host, { labels: weeks.labels, series: [{ name: 'Uren opgeteld', values: weeks.running }], format: Charts.fmt.dec(1), height: 190, endLabel: true })} />
+     : <div className="empty"><p>Geen uren voor deze selectie.</p></div>}
+   </section>
+  </div>
+
+  <div className="report-pair">
    <Summary title="Uren per project" columns={['Project', 'Uren']} rows={grouped('projectId', data.projecten)} />
    <Summary title="Uren per medewerker" columns={['Medewerker', 'Uren']} rows={grouped('employeeId', data.personeel)} />
   </div>
 
-  <div className="heading">
+  <div className="title-row">
    <div>
     <h2>Bezetting vandaag ({formatDateLong(iso)})</h2>
-    <p className="muted">Actieve medewerkers met een inzet waarvan de periode vandaag omvat. De urenfilters hierboven gelden hier niet.</p>
+    <p className="sub">Actieve medewerkers met een inzet waarvan de periode vandaag omvat. {available.length ? `${plural(available.length, 'medewerker is', 'medewerkers zijn')} vandaag beschikbaar.` : 'Iedereen staat vandaag op een project.'}</p>
    </div>
-   <button disabled={!data.inzet.length} onClick={downloadAssignments}>Download inzet CSV</button>
+   <div className="title-actions">
+    <button disabled={!data.inzet.length} onClick={downloadAssignments}>Download inzet CSV</button>
+   </div>
   </div>
-  <section className="metric-grid">
-   <div className="metric"><span>Bezet vandaag</span><strong data-testid="occupied-count">{occupancy.length - available.length}</strong></div>
-   <div className="metric"><span>Beschikbaar vandaag</span><strong data-testid="available-today">{available.length}</strong></div>
-  </section>
-  <section className="record">
-   <table aria-label="Bezetting vandaag">
-    <thead><tr><th>Medewerker</th><th>Project</th><th>Tot en met</th></tr></thead>
-    <tbody>{occupancy.map(row => <tr key={row.id}>
-     <td>{row.name}</td>
-     <td>{row.projects.length ? row.projects.join(', ') : 'Beschikbaar'}</td>
-     <td>{row.until ? formatDate(row.until) : '—'}</td>
-    </tr>)}</tbody>
-   </table>
-   {!occupancy.length && <p className="muted">Nog geen actieve medewerkers.</p>}
+  <section className="panel">
+   {occupancy.length
+    ? <table aria-label="Bezetting vandaag">
+     <thead><tr><th>Medewerker</th><th>Project</th><th className="n">Tot en met</th></tr></thead>
+     <tbody>{occupancy.map(row => <tr key={row.id}>
+      <td className="identity">{row.name}{row.role && <span className="sub">{row.role}</span>}</td>
+      <td>{row.projects.length ? row.projects.join(', ') : <span className="pill">Beschikbaar</span>}</td>
+      <td className="n num">{row.until ? formatDate(row.until) : '—'}</td>
+     </tr>)}</tbody>
+    </table>
+    : <div className="empty"><p>Nog geen actieve medewerkers.</p></div>}
   </section>
 
-  <h2>Volledig werkruimteoverzicht</h2>
-  <p className="muted">Projectstatussen en openstaande facturen: alle registraties, onafhankelijk van de urenfilters. Facturen hebben geen project- of medewerkerkoppeling.</p>
-  <div className="report-grid">
+  <div className="report-pair">
    <Summary title="Projectstatussen" columns={['Status', 'Projecten']} rows={modules.projecten.states.map(status => [status, data.projecten.filter(r => r.status === status).length])} />
    <Summary title="Inzetstatussen" columns={['Status', 'Inzet']} rows={modules.inzet.states.map(status => [status, data.inzet.filter(r => r.status === status).length])} />
-   <section className="metric">
-    <span>Openstaande facturen — alle registraties</span>
-    <strong data-testid="report-invoices">{money(data.facturatie.filter(r => r.status === 'Open').reduce((sum, r) => sum + Math.round(Number(r.amount) * 100), 0) / 100)}</strong>
-   </section>
   </div>
  </>;
 }

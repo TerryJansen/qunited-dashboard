@@ -5,3 +5,4 @@ test-results/
 playwright-report/
 .verify/
 playwright.verify.config.js
+.taste-skill/

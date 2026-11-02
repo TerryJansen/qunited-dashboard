@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAttachments, getAttachment, putAttachment, deleteAttachment, FILE_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_BYTES } from './files';
+import { formatDate } from './format';
 
 export { getAttachments };
 
@@ -58,27 +59,33 @@ export default function Attachments({ personId }) {
 
  return <section className="attachments">
   <h3>Cv &amp; certificaten</h3>
-  <p className="muted">Alleen in deze browser, niet gedeeld met anderen. Bewaar zelf een back-up. Maximaal 10 MB per bestand.</p>
+  <p className="kpi-note">Alleen in deze browser, niet gedeeld met anderen. Bewaar zelf een back-up. Maximaal 10 MB per bestand.</p>
   {error && <p className="error" role="alert">{error}</p>}
   {files.map(file => <div className="attachment" key={file.id}>
-   <b>{file.name}</b>
-   <p>{file.kind} · {file.type} · {kb(file.size)} KB</p>
-   {file.title && <p>{file.title}</p>}
-   {file.expiry && <p>Geldig tot: {file.expiry}</p>}
-   <div className="actions">
-    <button disabled={busy} onClick={() => download(file)}>Download</button>
-    <button className="danger" disabled={busy} onClick={() => remove(file)}>Bestand verwijderen</button>
+   <div className="file">
+    <b>{file.name}</b>
+    <p>
+     {file.kind} · <span className="num">{kb(file.size)}</span> KB
+     {file.title ? ` · ${file.title}` : ''}
+     {file.expiry ? ` · geldig tot ${formatDate(file.expiry)}` : ''}
+    </p>
+   </div>
+   <div className="row-actions">
+    <button className="text-action" disabled={busy} onClick={() => download(file)}>Download</button>
+    <button className="text-action danger" disabled={busy} onClick={() => remove(file)}>Bestand verwijderen</button>
    </div>
   </div>)}
   {['CV', 'Certificaat'].map(kind => <form key={kind} className="upload-form" onSubmit={event => add(event, kind)}>
    <fieldset disabled={busy}>
     <legend>{kind} toevoegen</legend>
     <p className="muted">{kind === 'CV' ? 'PDF, DOC of DOCX' : 'PDF, JPG of PNG'}</p>
-    <label>Bestand<input name="file" type="file" required accept={ALLOWED_EXTENSIONS[kind].map(e => `.${e}`).join(',')} /></label>
-    {kind === 'Certificaat' && <div className="form-grid">
-     <label>Certificaatnaam<input name="title" maxLength={200} /></label>
-     <label>Geldig tot<input name="expiry" type="date" /></label>
-    </div>}
+    <div className="upload-grid">
+     <label>Bestand<input name="file" type="file" required accept={ALLOWED_EXTENSIONS[kind].map(e => `.${e}`).join(',')} /></label>
+     {kind === 'Certificaat' && <>
+      <label>Certificaatnaam<input name="title" maxLength={200} /></label>
+      <label>Geldig tot<input name="expiry" type="date" /></label>
+     </>}
+    </div>
     <button type="submit">Bestand opslaan</button>
    </fieldset>
   </form>)}

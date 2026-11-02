@@ -1,80 +1,170 @@
 import React, { useEffect, useState } from 'react';
-import { modules } from './modules';
 import { getAllAttachments } from './files';
-import { collectAlerts, availableStaff, runsOn, isoToday } from './alerts';
-import { money, plural } from './format';
+import { collectAlerts, availableStaff, runsOn, isoToday, shiftDays } from './alerts';
+import { coverWindow, coverRows, coverFinding, comingFree, COVER_KINDS } from './cover';
+import { money, number, formatDate, plural } from './format';
+import Chart from './Chart';
 
-const VISIBLE_ALERTS = 8;
+const VISIBLE_ALERTS = 5;
+
+/** Op een telefoon is een venster van vier weken onleesbaar smal; dan tonen we er twee. */
+function useNarrow() {
+ const [narrow, setNarrow] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 860px)').matches);
+ useEffect(() => {
+  const query = matchMedia('(max-width: 860px)');
+  const change = () => setNarrow(query.matches);
+  query.addEventListener('change', change);
+  return () => query.removeEventListener('change', change);
+ }, []);
+ return narrow;
+}
 
 export default function Dashboard({ data }) {
  const [certificates, setCertificates] = useState([]);
+ const narrow = useNarrow();
 
  useEffect(() => {
-  // Certificaatdatums staan bij de bestanden in IndexedDB; lukt dat niet, dan tonen we gewoon de rest.
+  // De geldigheidsdatums staan bij de bestanden in IndexedDB; lukt dat niet, dan tonen we de rest.
   getAllAttachments().then(setCertificates).catch(() => setCertificates([]));
  }, []);
 
  const iso = isoToday();
+ const window = coverWindow(iso, narrow ? 14 : 28);
+ const rows = coverRows(data, window, iso);
  const alerts = collectAlerts(data, certificates, iso);
- const overdue = alerts.filter(alert => alert.level === 'verlopen').length;
+ const overdue = alerts.filter(alert => alert.level === 'verlopen');
  const available = availableStaff(data, iso);
- const running = data.inzet.filter(record => runsOn(record, iso));
+ const activeStaff = data.personeel.filter(person => person.status === 'Actief');
+ const free = comingFree(data, window, iso);
 
- const metrics = [
-  { label: 'Actieve projecten', value: data.projecten.filter(r => ['Planning', 'In uitvoering'].includes(r.status)).length, testid: 'project-count' },
-  { label: 'Lopende inzet', value: running.length, testid: 'assignment-count' },
-  { label: 'Beschikbaar personeel', value: available.length, testid: 'available-count' },
-  { label: 'Openstaande facturen', value: money(data.facturatie.filter(r => r.status === 'Open').reduce((sum, r) => sum + Math.round(Number(r.amount) * 100), 0) / 100), testid: 'invoice-total' },
-  { label: 'Materiaal in gebruik', value: data.materiaal.filter(r => r.status === 'In gebruik').reduce((sum, r) => sum + Number(r.quantity || 0), 0) },
-  { label: 'Open IT-meldingen', value: data.support.filter(r => r.status !== 'Opgelost').length },
- ];
+ // De laatste zeven dagen tot en met vandaag: altijd een volle week, met de maatstaf in het bijschrift.
+ const weekStart = shiftDays(iso, -6);
+ const weekSheets = data.urenstaten.filter(sheet => sheet.date >= weekStart && sheet.date <= iso);
+ const weekHours = weekSheets.reduce((sum, sheet) => sum + Math.round(Number(sheet.hours) * 100), 0) / 100;
+
+ const openInvoices = data.facturatie.filter(invoice => invoice.status === 'Open');
+ const openTotal = openInvoices.reduce((sum, invoice) => sum + Math.round(Number(invoice.amount) * 100), 0) / 100;
+ const lateInvoices = openInvoices.filter(invoice => invoice.due && invoice.due < iso);
+
+ const runningProjects = data.projecten
+  .filter(project => ['Planning', 'In uitvoering'].includes(project.status))
+  .sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'));
 
  return <>
-  <div className="heading">
+  <div className="title-row">
    <div>
-    <h1>Dashboard</h1>
-    <p>Overzicht van je eigen registraties.</p>
+    <h1>Overzicht</h1>
+    <p className="sub">{coverFinding(data, iso)}</p>
    </div>
-   <a className="primary" href="#/projecten">Naar projecten</a>
+   <div className="title-actions">
+    <a className="primary" href="#/inzet/nieuw">Inzet toevoegen</a>
+   </div>
   </div>
 
-  <section className="metric-grid" aria-label="Overzicht">
-   {metrics.map(metric => <div className="metric" key={metric.label}>
-    <span>{metric.label}</span>
-    <strong data-testid={metric.testid}>{metric.value}</strong>
-   </div>)}
-  </section>
+  <div className="overview-grid">
+   <div className="overview-main">
+    <section className="kpis" aria-label="Kerncijfers">
+     <div className="kpi">
+      <span className="kpi-label">Bezet vandaag</span>
+      <strong className="kpi-value" data-testid="assignment-count">{number(activeStaff.length - available.length)}</strong>
+      <p className="kpi-note">van {plural(activeStaff.length, 'actieve medewerker', 'actieve medewerkers')}</p>
+     </div>
+     <div className="kpi">
+      <span className="kpi-label">Beschikbaar vandaag</span>
+      <strong className="kpi-value" data-testid="available-count">{number(available.length)}</strong>
+      <p className="kpi-note">{free.length ? `${plural(free.length, 'medewerker komt', 'medewerkers komen')} vrij binnen 4 weken` : 'geen einddatum binnen 4 weken'}</p>
+     </div>
+     <div className="kpi">
+      <span className="kpi-label">Uren laatste 7 dagen</span>
+      <strong className="kpi-value" data-testid="week-hours">{number(weekHours)}</strong>
+      <p className="kpi-note">vanaf {formatDate(weekStart)}</p>
+     </div>
+     <div className="kpi">
+      <span className="kpi-label">Open facturen</span>
+      <strong className="kpi-value" data-testid="invoice-total">{money(openTotal)}</strong>
+      <p className="kpi-note">{lateInvoices.length ? `waarvan ${plural(lateInvoices.length, 'factuur', 'facturen')} vervallen` : 'geen vervallen facturen'}</p>
+     </div>
+    </section>
 
-  <h2>Attentiepunten</h2>
-  <p className="muted">
-   Uitsluitend op basis van datums die je zelf hebt ingevuld: verstreken datums en datums die binnenkort aflopen.
-   {overdue > 0 && ` ${overdue} ${overdue === 1 ? 'punt is' : 'punten zijn'} al verstreken.`}
-  </p>
-  {alerts.length
-   ? <section className="alerts" aria-label="Attentiepunten">
-    {alerts.slice(0, VISIBLE_ALERTS).map(alert => <a className={`alert alert-${alert.level}`} key={alert.id} href={`#/${alert.route}`}>
-     <span className="badge">{alert.level === 'verlopen' ? 'Verstreken' : 'Binnenkort'}</span>
-     <b>{alert.text}</b>
-     <span className="muted">{alert.module}</span>
-    </a>)}
-    {alerts.length > VISIBLE_ALERTS && <p className="muted" data-testid="alerts-more">
-     Nog {plural(alerts.length - VISIBLE_ALERTS, 'attentiepunt', 'attentiepunten')} in de modules zelf.
-    </p>}
-   </section>
-   : <div className="empty" data-testid="alerts-empty">
-    <h2>Geen attentiepunten</h2>
-    <p>Geen verstreken of binnenkort aflopende datums in je registraties.</p>
-   </div>}
+    <section className="panel">
+     <header>
+      <h2>Bezetting</h2>
+      <span className="meta">{formatDate(window.start)} tot en met {formatDate(window.end)}</span>
+     </header>
+     {rows.length
+      ? <Chart
+       legend
+       label={`Bezetting van ${rows.length} medewerkers over ${window.days.length} dagen`}
+       deps={[JSON.stringify(rows), window.start]}
+       draw={(Charts, host, legendHost) => Charts.timeline(host, rows, COVER_KINDS, {
+        days: window.days,
+        weekends: window.weekends,
+        today: window.today,
+        legend: legendHost,
+        extras: false,
+       })}
+      />
+      : <div className="empty">
+       <p>Nog geen actieve medewerkers.</p>
+       <p><a href="#/personeel">Medewerkers toevoegen</a></p>
+      </div>}
+     {!!rows.length && <p className="kpi-note">De oranje lijn is vandaag. Medewerkers zonder lopende inzet staan bovenaan.</p>}
+    </section>
 
-  <h2>Snel naar</h2>
-  <section className="quick-grid">
-   {Object.entries(modules).map(([key, m]) => <a className="quick-link" href={`#/${key}`} key={key}>
-    <b>{m.title}</b>
-    <span>{plural(data[key].length, 'registratie', 'registraties')}</span>
-   </a>)}
-   <a className="quick-link" href="#/rapportages"><b>Rapportages</b><span>Uren en bezetting</span></a>
-   <a className="quick-link" href="#/backup"><b>Back-up</b><span>Downloaden en terugzetten</span></a>
-  </section>
-  <p className="muted">Geen externe gegevensbronnen. Alleen wat je zelf toevoegt verschijnt hier.</p>
+    <section className="panel">
+     <header>
+      <h2>Projecten in uitvoering</h2>
+       <span className="meta">{plural(runningProjects.length, 'project', 'projecten')}</span>
+      </header>
+      {runningProjects.length
+       ? <table aria-label="Projecten in uitvoering">
+        <thead><tr><th>Project</th><th className="n">Einddatum</th><th className="n">Voortgang</th></tr></thead>
+        <tbody>{runningProjects.map(project => <tr key={project.id}>
+         <td className="identity">{project.name}{project.client && <span className="sub">{project.client}</span>}</td>
+         <td className="n num">{project.due ? formatDate(project.due) : '—'}</td>
+         <td className="n num">{project.progress === '' || project.progress === undefined ? '—' : `${number(Number(project.progress))}%`}</td>
+        </tr>)}</tbody>
+       </table>
+       : <div className="empty"><p>Geen projecten met status Planning of In uitvoering.</p></div>}
+    </section>
+   </div>
+
+   <div className="overview-rail">
+    <h2 className="rail-head">Attentiepunten</h2>
+    <section className="panel" aria-label="Attentiepunten">
+     {alerts.length
+      ? <>
+       <div className="alerts">
+        {alerts.slice(0, VISIBLE_ALERTS).map(alert => <a className={`alert alert-${alert.level}`} key={alert.id} href={`#/${alert.route}`}>
+         <b>{alert.text}</b>
+         <span className="when">{alert.module}</span>
+        </a>)}
+       </div>
+       <p className="kpi-note alerts-foot" data-testid="alerts-more">
+        {overdue.length ? `${plural(overdue.length, 'punt is', 'punten zijn')} al verstreken` : 'Niets verstreken'}
+        {alerts.length > VISIBLE_ALERTS ? ` · nog ${plural(alerts.length - VISIBLE_ALERTS, 'punt', 'punten')} in de modules` : ''}
+       </p>
+      </>
+      : <div className="empty" data-testid="alerts-empty">
+       <p>Geen verstreken of binnenkort aflopende datums.</p>
+      </div>}
+    </section>
+
+    <h2 className="rail-head">Komt binnenkort vrij</h2>
+    <section className="panel" aria-label="Komt binnenkort vrij">
+     {free.length
+      ? <table aria-label="Medewerkers die binnenkort vrijkomen">
+       <thead><tr><th>Medewerker</th><th className="n">Vrij op</th></tr></thead>
+       <tbody>{free.slice(0, 6).map(person => <tr key={person.name}>
+        <td className="identity">{person.name}{person.role && <span className="sub">{person.role}</span>}</td>
+        <td className="n num">{formatDate(person.on)}</td>
+       </tr>)}</tbody>
+      </table>
+      : <div className="empty">
+       <p>{available.length ? `${plural(available.length, 'medewerker staat', 'medewerkers staan')} nu al zonder inzet.` : 'Geen einddatum binnen vier weken.'}</p>
+      </div>}
+    </section>
+   </div>
+  </div>
  </>;
 }

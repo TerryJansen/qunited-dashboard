@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { modules } from './modules';
 import { migrate, isValid, pickModules, emptyData } from './storage';
 import { getAllAttachments, replaceAllAttachments, clearAttachments, FILE_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_BYTES } from './files';
-import { formatDate, plural } from './format';
+import { formatDate, plural, number } from './format';
 
 const FORMAT = 'qunited.backup.v1';
-const mb = bytes => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 }).format(bytes / 1048576);
 const today = () => new Date().toISOString().slice(0, 10);
 const allowedTypes = new Set(Object.values(FILE_TYPES));
 
@@ -141,68 +140,73 @@ export default function Backup({ data, onRestore, readOnly }) {
  }
 
  return <>
-  <div className="heading">
+  <div className="title-row">
    <div>
     <h1>Back-up</h1>
-    <p>Zet je werkruimte in één bestand, en lees die later of in een andere browser weer in.</p>
+    <p className="sub">Zet je werkruimte in één bestand, en lees die later of in een andere browser weer in.</p>
    </div>
   </div>
 
   {error && <p role="alert" className="error">{error}</p>}
   {note && <p role="status" className="notice">{note}</p>}
 
-  <section className="record">
-   <h2>Back-up downloaden</h2>
-   <p className="muted">
-    Het bestand bevat je {plural(recordCount, 'registratie', 'registraties')} en, als je dat aanvinkt, de cv’s en certificaten.
-    Het blijft op je eigen apparaat; er wordt niets verstuurd. Bewaar het als vertrouwelijk: personeelsgegevens staan er leesbaar in.
-   </p>
-   <label className="checkbox">
-    <input type="checkbox" checked={withFiles} onChange={event => setWithFiles(event.target.checked)} />
-    Cv’s en certificaten meenemen (groter bestand)
-   </label>
-   <div className="actions">
-    <button className="primary" disabled={busy} onClick={download}>Back-up downloaden</button>
+  <div className="settings-row">
+   <div className="label-col">
+    <h2>Back-up downloaden</h2>
+    <p>Het bestand bevat je {plural(recordCount, 'registratie', 'registraties')} en, als je dat aanvinkt, de cv’s en certificaten. Het blijft op je eigen apparaat; er wordt niets verstuurd. Bewaar het als vertrouwelijk: personeelsgegevens staan er leesbaar in.</p>
    </div>
-  </section>
-
-  <section className="record">
-   <h2>Back-up terugzetten</h2>
-   <p className="muted">
-    Terugzetten <b>vervangt</b> alles wat nu in deze browser staat. Download eerst een back-up van je huidige gegevens als je die wilt houden.
-   </p>
-   {readOnly
-    ? <p className="error" role="alert">Terugzetten is niet mogelijk zolang de huidige opslag niet gelezen kan worden.</p>
-    : <>
-     <label>Back-upbestand kiezen<input type="file" accept=".json,application/json" onChange={choose} disabled={busy} /></label>
-     {preview && <div className="preview">
-      <h3>Gevonden in {preview.filename}</h3>
-      <p className="muted">Gemaakt op {preview.exported}. Niets is nog gewijzigd.</p>
-      <table aria-label="Inhoud van de back-up">
-       <thead><tr><th>Onderdeel</th><th>Aantal</th></tr></thead>
-       <tbody>
-        {preview.counts.map(([title, count]) => <tr key={title}><td>{title}</td><td>{count}</td></tr>)}
-        <tr><td>Cv’s en certificaten</td><td data-testid="preview-files">{preview.attachments.length}</td></tr>
-       </tbody>
-      </table>
-      {preview.skipped.ongeldig > 0 && <p className="muted">{plural(preview.skipped.ongeldig, 'bestand wordt', 'bestanden worden')} overgeslagen: onbekend type of te groot.</p>}
-      {preview.skipped['zonder medewerker'] > 0 && <p className="muted">{plural(preview.skipped['zonder medewerker'], 'bestand wordt', 'bestanden worden')} overgeslagen: de medewerker zit niet in deze back-up.</p>}
-      <div className="actions">
-       <button className="danger" disabled={busy} onClick={restore}>Alles vervangen</button>
-       <button disabled={busy} onClick={() => setPreview(null)}>Annuleren</button>
-      </div>
-     </div>}
-    </>}
-  </section>
-
-  <section className="record destructive">
-   <h2>Werkruimte wissen</h2>
-   <p className="muted">
-    Verwijdert alle registraties, cv’s en certificaten uit deze browser. Gebruik dit als je het apparaat of browserprofiel niet meer zelf gebruikt.
-   </p>
-   <div className="actions">
-    <button className="danger" disabled={busy} onClick={wipe}>Werkruimte wissen</button>
+   <div className="settings-panel">
+    <label className="checkbox">
+     <input type="checkbox" checked={withFiles} onChange={event => setWithFiles(event.target.checked)} />
+     Cv’s en certificaten meenemen (groter bestand)
+    </label>
+    <div className="actions">
+     <button className="primary" disabled={busy} onClick={download}>Back-up downloaden</button>
+    </div>
    </div>
-  </section>
+  </div>
+
+  <div className="settings-row">
+   <div className="label-col">
+    <h2>Back-up terugzetten</h2>
+    <p>Terugzetten <b>vervangt</b> alles wat nu in deze browser staat. Download eerst een back-up van je huidige gegevens als je die wilt houden.</p>
+   </div>
+   <div className="settings-panel">
+    {readOnly
+     ? <p className="error" role="alert">Terugzetten is niet mogelijk zolang de huidige opslag niet gelezen kan worden.</p>
+     : <>
+      <label>Back-upbestand kiezen<input type="file" accept=".json,application/json" onChange={choose} disabled={busy} /></label>
+      {preview && <div className="preview">
+       <h3>Gevonden in {preview.filename}</h3>
+       <p className="kpi-note">Gemaakt op {preview.exported}. Niets is nog gewijzigd.</p>
+       <table aria-label="Inhoud van de back-up">
+        <thead><tr><th>Onderdeel</th><th className="n">Aantal</th></tr></thead>
+        <tbody>
+         {preview.counts.map(([title, count]) => <tr key={title}><td>{title}</td><td className="n num">{number(count)}</td></tr>)}
+         <tr><td>Cv’s en certificaten</td><td className="n num" data-testid="preview-files">{number(preview.attachments.length)}</td></tr>
+        </tbody>
+       </table>
+       {preview.skipped.ongeldig > 0 && <p className="kpi-note">{plural(preview.skipped.ongeldig, 'bestand wordt', 'bestanden worden')} overgeslagen: onbekend type of te groot.</p>}
+       {preview.skipped['zonder medewerker'] > 0 && <p className="kpi-note">{plural(preview.skipped['zonder medewerker'], 'bestand wordt', 'bestanden worden')} overgeslagen: de medewerker zit niet in deze back-up.</p>}
+       <div className="actions">
+        <button className="danger" disabled={busy} onClick={restore}>Alles vervangen</button>
+        <button disabled={busy} onClick={() => setPreview(null)}>Annuleren</button>
+       </div>
+      </div>}
+     </>}
+   </div>
+  </div>
+
+  <div className="settings-row">
+   <div className="label-col">
+    <h2>Werkruimte wissen</h2>
+    <p>Verwijdert alle registraties, cv’s en certificaten uit deze browser. Gebruik dit als je het apparaat of browserprofiel niet meer zelf gebruikt. Dit kan niet ongedaan worden gemaakt.</p>
+   </div>
+   <div className="settings-panel">
+    <div className="actions">
+     <button className="danger" disabled={busy} onClick={wipe}>Werkruimte wissen</button>
+    </div>
+   </div>
+  </div>
  </>;
 }
