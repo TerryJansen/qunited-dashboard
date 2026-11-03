@@ -444,6 +444,7 @@ a { color: inherit; }
 .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 20px; margin: 0; }
 .detail-grid dt { color: var(--muted); font-size: var(--fs-small); }
 .detail-grid dd { margin: 3px 0 0; font-size: var(--fs-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-grid dd .sub { display: block; margin-top: 2px; font-size: var(--fs-small); color: var(--muted); }
 .title-row .sub .pill { margin-right: 8px; }
 
 /* ---------- rustiger op de telefoon: grotere letters, meer lucht, minder regels ---------- */

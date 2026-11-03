@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { modules } from './modules';
+import { modules, looksLikeId } from './modules';
 
 /** Dezelfde validatie voor elke module, zodat een lijst en een detailpagina niet uit elkaar lopen. */
 export function problemWith(id, record, data) {
@@ -14,7 +14,8 @@ export function problemWith(id, record, data) {
     return `Vul bij ${field.label} een getal in van ${field.min ?? '0'} tot ${field.max ?? 'de toegestane waarde'}.`;
    }
   }
-  if (field.source && value && !data[field.source].some(option => option.id === value)) {
+  // Tekst van vóór dit veld een keuzelijst werd blijft toegestaan; een id dat niet bestaat niet.
+  if (field.source && value && looksLikeId(value) && !data[field.source].some(option => option.id === value)) {
    return `Kies een bestaande ${modules[field.source].singular}.`;
   }
  }
@@ -48,6 +49,8 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
      ? <select aria-label={field.label} required={field.required} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })}>
       <option value="">Kies {field.label.toLowerCase()}</option>
       {data[field.source].map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+      {draft[field.key] && !looksLikeId(draft[field.key]) && !data[field.source].some(option => option.id === draft[field.key])
+       && <option value={draft[field.key]}>{draft[field.key]} (eerder ingetypt)</option>}
      </select>
      : field.type === 'textarea'
       ? <textarea aria-label={field.label} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })} />

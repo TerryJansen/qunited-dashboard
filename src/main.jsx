@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { modules, dependentsOf, safeUrl } from './modules';
+import { modules, dependentsOf, safeUrl, resolveReference, subText } from './modules';
 import { readData, writeData, WRITE_ERROR } from './storage';
 import './app.css';
 import './styles.css';
@@ -127,7 +127,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  const [openFiles, setOpenFiles] = useState('');
 
  // Modules waarnaar deze module verwijst en die nog leeg zijn: zonder die gegevens valt er niets te kiezen.
- const missing = [...new Set(m.fields.filter(field => field.source).map(field => field.source))].filter(source => !data[source].length);
+ const missing = [...new Set(m.fields.filter(field => field.source && field.required).map(field => field.source))].filter(source => !data[source].length);
  // Velden die de rijtitel al noemt horen niet nog eens in een kolom.
  const hidden = new Set(['name', ...(m.titleFields || []), m.subField].filter(Boolean));
 
@@ -170,7 +170,12 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  function cell(field, record) {
   const value = record[field.key];
   if (field.key === 'url') return safeUrl(value) ? <a href={value} target="_blank" rel="noopener noreferrer">Document openen</a> : 'Ongeldige documentlink';
-  if (field.source) return data[field.source].find(x => x.id === value)?.name || 'Verwijderde referentie';
+  if (field.source) {
+   const link = resolveReference(data, field.source, value);
+   if (link.kind === 'record') return <a href={`#/${field.source}/${link.record.id}`}>{link.record.name}</a>;
+   if (link.kind === 'tekst') return link.text;
+   return 'Verwijderde referentie';
+  }
   if (field.key === 'amount') return money(Number(value));
   if (field.type === 'date') return formatDate(value);
   if (field.type === 'number') return number(Number(value));
@@ -234,7 +239,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
       <tr className={openFiles === record.id ? 'expanded' : undefined}>
        <td className="identity">
         <a href={`#/${id}/${record.id}`}>{titleOf(id, record, data)}</a>
-        {m.subField && record[m.subField] && <span className="sub">{record[m.subField]}</span>}
+        {subText(id, record, data) && <span className="sub">{subText(id, record, data)}</span>}
        </td>
        {columns.map(field => <td key={field.key} className={numeric(field) ? 'n num' : undefined}>{cell(field, record)}</td>)}
        <td><span className={`pill ${statusTone(id, record, iso)}`}>{record.status}</span></td>

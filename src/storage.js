@@ -1,4 +1,4 @@
-import { modules, STORAGE_KEY, emptyData } from './modules';
+import { modules, STORAGE_KEY, emptyData, looksLikeId } from './modules';
 
 export { emptyData };
 
@@ -12,6 +12,30 @@ const isRecordObject = value => !!value && typeof value === 'object' && !Array.i
 export function migrate(data) {
  if (!isRecordObject(data)) return data;
  for (const key of Object.keys(modules)) if (!Object.hasOwn(data, key)) data[key] = [];
+ return linkByName(data);
+}
+
+/**
+ * Velden die eerst een tekstvak waren en nu naar een registratie verwijzen: waar de ingetypte
+ * naam precies een bestaande registratie is, wordt het die registratie. Tekst die nergens op
+ * slaat blijft staan; er gaat niets verloren.
+ */
+export function linkByName(data) {
+ for (const [key, m] of Object.entries(modules)) {
+  const links = m.fields.filter(field => field.source);
+  if (!links.length || !Array.isArray(data[key])) continue;
+  for (const record of data[key]) {
+   for (const field of links) {
+    const value = record[field.key];
+    if (typeof value !== 'string' || !value || looksLikeId(value)) continue;
+    const source = data[field.source];
+    if (!Array.isArray(source)) continue;
+    const match = source.find(item => typeof item.name === 'string'
+     && item.name.trim().toLocaleLowerCase() === value.trim().toLocaleLowerCase());
+    if (match) record[field.key] = match.id;
+   }
+  }
+ }
  return data;
 }
 
