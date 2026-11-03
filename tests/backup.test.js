@@ -1,15 +1,17 @@
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import {emptyData} from '../src/modules.js';
+import {seed,openFiles,row} from './helpers.js';
 const seeded={...emptyData(),
  projecten:[{id:'p1',name:'Project A',status:'In uitvoering'}],
  personeel:[{id:'e1',name:'Ada',status:'Actief'}],
  facturatie:[{id:'f1',name:'F-1',client:'Klant',status:'Open',amount:'250'}]};
 
-async function seed(page){await page.goto('/');await page.evaluate(d=>localStorage.setItem('qunited.records.v1',JSON.stringify(d)),seeded);await page.reload()}
+const start=page=>seed(page,seeded);
 
 async function addCertificate(page){
  await page.goto('/#/personeel');
+ await openFiles(page,'Ada');
  const form=page.getByRole('group',{name:'Certificaat toevoegen'});
  await form.getByLabel('Bestand').setInputFiles({name:'vca.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\nfixture\n%%EOF')});
  await form.getByLabel('Certificaatnaam').fill('VCA VOL');
@@ -19,7 +21,7 @@ async function addCertificate(page){
 }
 
 test('a backup round-trips records and files through a wiped workspace',async({page})=>{
- await seed(page);
+ await start(page);
  await addCertificate(page);
  await page.goto('/#/backup');
  const waiting=page.waitForEvent('download');
@@ -48,8 +50,9 @@ test('a backup round-trips records and files through a wiped workspace',async({p
  await page.getByRole('button',{name:'Alles vervangen'}).click();
  await expect(page.getByRole('status')).toContainText('Terugzetten gelukt');
  await page.goto('/#/projecten');
- await expect(page.getByRole('heading',{name:'Project A'})).toBeVisible();
+ await expect(row(page,'Project A')).toBeVisible();
  await page.goto('/#/personeel');
+ await openFiles(page,'Ada');
  await expect(page.getByText('vca.pdf',{exact:true})).toBeVisible();
  const attachment=page.locator('.attachment').filter({hasText:'vca.pdf'});
  const download=page.waitForEvent('download');
@@ -58,7 +61,7 @@ test('a backup round-trips records and files through a wiped workspace',async({p
 });
 
 test('cancelling a restore changes nothing',async({page})=>{
- await seed(page);
+ await start(page);
  await page.goto('/#/backup');
  const waiting=page.waitForEvent('download');
  await page.getByRole('button',{name:'Back-up downloaden'}).click();
@@ -70,11 +73,11 @@ test('cancelling a restore changes nothing',async({page})=>{
  await page.getByRole('button',{name:'Annuleren',exact:true}).click();
  await expect(page.getByTestId('preview-files')).toHaveCount(0);
  await page.goto('/#/projecten');
- await expect(page.getByRole('heading',{name:'Project A'})).toBeVisible();
+ await expect(row(page,'Project A')).toBeVisible();
 });
 
 test('a damaged or foreign file is refused without touching the workspace',async({page})=>{
- await seed(page);
+ await start(page);
  await page.goto('/#/backup');
  for(const body of ['{"format":"iets-anders","records":{}}','niet eens json','{"format":"qunited.backup.v1","records":{"projecten":42}}']){
   await page.getByLabel('Back-upbestand kiezen').setInputFiles({name:'kapot.json',mimeType:'application/json',buffer:Buffer.from(body)});
@@ -82,11 +85,11 @@ test('a damaged or foreign file is refused without touching the workspace',async
   await expect(page.getByTestId('preview-files')).toHaveCount(0);
  }
  await page.goto('/#/projecten');
- await expect(page.getByRole('heading',{name:'Project A'})).toBeVisible();
+ await expect(row(page,'Project A')).toBeVisible();
 });
 
 test('files without a matching employee are skipped, not restored',async({page})=>{
- await seed(page);
+ await start(page);
  await page.goto('/#/backup');
  const payload={format:'qunited.backup.v1',exported:'2026-11-02T00:00:00.000Z',records:{...emptyData(),projecten:[{id:'p9',name:'Alleen project',status:'Planning'}]},
   attachments:[
@@ -100,7 +103,7 @@ test('files without a matching employee are skipped, not restored',async({page})
 });
 
 test('a backup without files stays small and still restores records',async({page})=>{
- await seed(page);
+ await start(page);
  await addCertificate(page);
  await page.goto('/#/backup');
  await page.getByLabel('Cv’s en certificaten meenemen (groter bestand)').uncheck();

@@ -149,7 +149,7 @@ export default function Reports({ data }) {
     {weeks.labels.length
      ? <Chart label="Uren opgeteld" deps={[JSON.stringify(weeks)]}
       draw={(Charts, host) => Charts.line(host, { labels: weeks.labels, series: [{ name: 'Uren opgeteld', values: weeks.running }], format: Charts.fmt.dec(1), height: 190, endLabel: true })} />
-     : <div className="empty"><p>Geen uren voor deze selectie.</p></div>}
+     : <div className="empty"><p>Geen uren om op te tellen.</p></div>}
    </section>
   </div>
 

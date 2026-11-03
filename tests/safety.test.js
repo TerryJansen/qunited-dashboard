@@ -1,4 +1,6 @@
 import {test,expect} from '@playwright/test';
+import {modules} from '../src/modules.js';
+import {row,navigate,openMenu} from './helpers.js';
 test('validation rejects whitespace, date order and unsafe document links',async({page})=>{
  await page.goto('/#/projecten');await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
  await page.getByLabel('Projectnaam').fill('   ');await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(page.getByRole('alert')).toContainText('verplichte');
@@ -8,17 +10,29 @@ test('validation rejects whitespace, date order and unsafe document links',async
 });
 test('invalid saved data does not crash or overwrite existing data',async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('qunited.records.v1','{"projecten":42}'));
- await page.goto('/');await expect(page.getByRole('alert')).toContainText('niet overschreven');await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible();
- await page.getByRole('navigation').getByRole('link',{name:'Projecten',exact:true}).click();await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Nieuw');await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(page.getByRole('alert')).toContainText('niet overschreven');expect(await page.evaluate(()=>localStorage.getItem('qunited.records.v1'))).toBe('{"projecten":42}');
+ await page.goto('/');await expect(page.getByRole('alert')).toContainText('niet overschreven');await expect(page.getByRole('heading',{name:'Overzicht',exact:true})).toBeVisible();
+ await navigate(page,'Projecten');await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Nieuw');await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(page.getByRole('alert')).toContainText('niet overschreven');expect(await page.evaluate(()=>localStorage.getItem('qunited.records.v1'))).toBe('{"projecten":42}');
 });
 test('write failure keeps draft and shows honest error',async({page})=>{
  await page.goto('/#/projecten');await page.evaluate(()=>Storage.prototype.setItem=function(){throw new DOMException('Full','QuotaExceededError')});await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Niet opgeslagen');await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Opslaan mislukt');await expect(page.getByLabel('Projectnaam')).toHaveValue('Niet opgeslagen');
 });
-test('mobile navigation, quick links, overview and history',async({page})=>{
+test('mobile navigation, the folded menu, the overview and history',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');
- const nav=page.getByRole('navigation');for(const name of ['Projecten','Materiaal','Inventaris','Facturatie','IT & support','Procedures','Personeel'])await expect(nav.getByRole('link',{name,exact:true})).toBeVisible();
+ // de zijbalk is opgevouwen tot één knop en neemt geen breedte van het scherm
+ await expect(page.getByRole('button',{name:'Menu',exact:true})).toBeVisible();
+ await openMenu(page);
+ const nav=page.getByRole('navigation',{name:'Hoofdnavigatie'});
+ for(const m of Object.values(modules))await expect(nav.getByRole('link',{name:m.title,exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.locator('.quick-grid').getByRole('link',{name:/Projecten/}).click();await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Eigen project');await page.getByRole('button',{name:'Opslaan',exact:true}).click();
- await nav.getByRole('link',{name:'Dashboard',exact:true}).click();await expect(page.getByTestId('project-count')).toHaveText('1');await page.goBack();await expect(page.getByRole('heading',{name:'Projecten',exact:true})).toBeVisible();await page.goForward();await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible();
- for(const name of ['Materiaal','Inventaris','Facturatie','IT & support','Procedures','Personeel']){await page.locator('.quick-grid').getByRole('link',{name:new RegExp(name)}).click();await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();await nav.getByRole('link',{name:'Dashboard',exact:true}).click()}
+ await navigate(page,'Projecten');
+ await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Eigen project');await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ await navigate(page,'Dashboard');
+ await expect(page.getByRole('table',{name:'Projecten in uitvoering'})).toContainText('Eigen project');
+ await page.goBack();await expect(page.getByRole('heading',{name:'Projecten',exact:true})).toBeVisible();
+ await page.goForward();await expect(page.getByRole('heading',{name:'Overzicht',exact:true})).toBeVisible();
+ for(const name of ['Materiaal','Inventaris','Facturatie','IT & support','Procedures','Personeel']){
+  await navigate(page,name);await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }
+ await navigate(page,'Projecten');await expect(row(page,'Eigen project')).toBeVisible();
 });

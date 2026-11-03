@@ -1,13 +1,37 @@
 import {test,expect} from '@playwright/test';
 import {emptyData} from '../src/modules.js';
-export async function seed(page){await page.goto('/');await page.evaluate(data=>localStorage.setItem('qunited.records.v1',JSON.stringify(data)),{...emptyData(),projecten:[{id:'p1',name:'Project A',status:'Planning'},{id:'p2',name:'Project B',status:'Afgerond'}],personeel:[{id:'e1',name:'Ada',status:'Actief'},{id:'e2',name:'Bram',status:'Actief'}]});await page.reload()}
+import {seed,row,navigate,statusTab,filterStatus} from './helpers.js';
+export const data={...emptyData(),projecten:[{id:'p1',name:'Project A',status:'Planning'},{id:'p2',name:'Project B',status:'Afgerond'}],personeel:[{id:'e1',name:'Ada',status:'Actief'},{id:'e2',name:'Bram',status:'Actief'}]};
 test('Urenstaten validates, cancels, saves references and persists CRUD',async({page})=>{
- await seed(page);await page.getByRole('navigation').getByRole('link',{name:'Urenstaten',exact:true}).click();
- await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Omschrijving',{exact:true}).fill('Installatie');await page.getByLabel('Medewerker',{exact:true}).selectOption('e1');await page.getByLabel('Project',{exact:true}).selectOption('p1');await page.getByLabel('Werkdatum').fill('2026-11-02');
- for(const value of ['0','25']){await page.getByLabel('Uren',{exact:true}).fill(value);await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(page.getByRole('article')).toHaveCount(0)}
- await page.getByLabel('Uren',{exact:true}).fill('7.5');await page.getByRole('button',{name:'Opslaan',exact:true}).click();await page.reload();const record=page.getByRole('article');await expect(record).toContainText('Ada');await expect(record).toContainText('Project A');await expect(record).toContainText('7.5');
- await page.getByRole('button',{name:'Bewerken',exact:true}).click();await page.getByLabel('Uren',{exact:true}).fill('6');await page.getByRole('button',{name:'Annuleren',exact:true}).click();await expect(record).toContainText('7.5');
- await page.getByRole('button',{name:'Bewerken',exact:true}).click();await page.getByLabel('Uren',{exact:true}).fill('6');await page.getByLabel('Status',{exact:true}).selectOption('Ingediend');await page.getByRole('button',{name:'Opslaan',exact:true}).click();await page.reload();await expect(record).toContainText('Ingediend');
- await page.getByLabel('Zoeken').fill('Ada');await expect(record).toHaveCount(1);await page.getByLabel('Filter op status').selectOption('Concept');await expect(record).toHaveCount(0);await page.getByRole('button',{name:'Filters wissen'}).click();await expect(record).toHaveCount(1);
- page.once('dialog',d=>d.dismiss());await page.getByRole('button',{name:'Verwijderen',exact:true}).click();await expect(record).toHaveCount(1);page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Verwijderen',exact:true}).click();await page.reload();await expect(page.getByText('Nog geen registraties')).toBeVisible();
+ await seed(page,data);
+ await navigate(page,'Urenstaten');
+ await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
+ await page.getByLabel('Omschrijving',{exact:true}).fill('Installatie');
+ await page.getByLabel('Medewerker',{exact:true}).selectOption('e1');
+ await page.getByLabel('Project',{exact:true}).selectOption('p1');
+ await page.getByLabel('Werkdatum').fill('2026-11-02');
+ for(const value of ['0','25']){await page.getByLabel('Uren',{exact:true}).fill(value);await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(row(page,'Installatie')).toHaveCount(0)}
+ await page.getByLabel('Uren',{exact:true}).fill('7.5');await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ await page.reload();
+ const record=row(page,'Installatie');
+ await expect(record).toContainText('Ada');
+ await expect(record).toContainText('Project A');
+ await expect(record).toContainText('7,5');
+ await record.getByRole('button',{name:'Bewerken',exact:true}).click();
+ await page.getByLabel('Uren',{exact:true}).fill('6');
+ await page.getByRole('button',{name:'Annuleren',exact:true}).click();
+ await expect(record).toContainText('7,5');
+ await record.getByRole('button',{name:'Bewerken',exact:true}).click();
+ await page.getByLabel('Uren',{exact:true}).fill('6');
+ await page.getByLabel('Status',{exact:true}).selectOption('Ingediend');
+ await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ await page.reload();await expect(record).toContainText('Ingediend');
+ await page.getByLabel('Zoeken').fill('Ada');await expect(record).toHaveCount(1);
+ await filterStatus(page,'Concept');await expect(record).toHaveCount(0);
+ await page.getByRole('button',{name:'Filters wissen'}).click();await expect(record).toHaveCount(1);
+ await expect(statusTab(page,0)).toHaveAttribute('aria-selected','true');
+ page.once('dialog',d=>d.dismiss());await record.getByRole('button',{name:'Verwijderen',exact:true}).click();
+ await expect(record).toHaveCount(1);
+ page.once('dialog',d=>d.accept());await record.getByRole('button',{name:'Verwijderen',exact:true}).click();
+ await page.reload();await expect(page.getByText('Nog geen registraties')).toBeVisible();
 });
