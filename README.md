@@ -16,9 +16,13 @@ Tests starten zelf een geïsoleerde Vite-server op 127.0.0.1:4182 en gebruiken e
 
 ## Onderdelen
 
-De werkruimte heeft vier soorten scherm. **Overzicht** beantwoordt één vraag: wie staat de komende vier weken waar, en waar valt een gat. Het grootste blok is de bezettingsbalk — medewerkers links, dagen over de breedte, elke soort inzet met zijn eigen mark (actief een gevulde balk met een gekleurd randje, gepland een gestreepte omlijning, afgerond een grijze stap) en vandaag als lijn in de datakleur. Medewerkers zonder lopende inzet staan bovenaan, daarna wie het eerst vrijkomt. Daarnaast een strip met vier kerncijfers, een lijst projecten in uitvoering, en een kolom met attentiepunten en wie er binnenkort vrijkomt.
+De werkruimte heeft vier soorten scherm. **Overzicht** beantwoordt vier vragen in één blik: wie is ingezet en wie is beschikbaar, welke projecten lopen, wat vraagt vandaag actie, en wat staat er open aan urenstaten en facturen. Bovenaan vier kerncijfers die doorklikken naar het gefilterde overzicht waar ze vandaan komen, elk met de periode waarop ze slaan. Daaronder de bezettingsplanning — medewerkers links, dagen over de breedte, met vorige/volgende/vandaag en een keuze tussen één en vier weken — naast een actielijst. Daaronder de lopende en geplande projecten en wie er binnenkort vrijkomt.
 
-**Modules** zijn tabellen met onderstreepte tabs per status, een teller per tab, zoeken en één rij-actie per taak. Projecten, Inzet, Urenstaten, Personeel, Materiaal, Inventaris, Facturatie, IT & support en Procedures werken alle op dezelfde manier: toevoegen, bewerken en verwijderen met bevestiging. Een kolom die in elke zichtbare rij leeg is, valt weg. Inzet koppelt een medewerker aan een project met periode, rol en uren per week; de rijtitel wordt afgeleid uit medewerker en project, zodat die een hernoemd project volgt in plaats van te verouderen.
+Bezetting telt iemand één keer, ook met twee inzetten op dezelfde dag. Beschikbaar betekent: actief, niet ingezet én niet afwezig. "Inzetbaar" bij een aflopende inzet is de eerste dag daarna zonder inzet en zonder afwezigheid, dus een aflopende opdracht maakt iemand niet automatisch vrij.
+
+De actielijst noemt per punt wat er moet gebeuren, wie of wat het betreft, de deadline of het aantal dagen achterstand, de urgentie en waar je het doet: urenstaten die beoordeling nodig hebben, werkdagen zonder urenstaat, projecten met een onvervulde personeelsbehoefte, verlopende certificaten, vervallen facturen, en verstreken inspectie-, materiaal- en herzieningsdatums. Zonder brongegevens meldt het scherm dat het niets heeft om uit af te leiden, in plaats van dat alles in orde is.
+
+**Modules** zijn tabellen met onderstreepte tabs per status, een teller per tab, zoeken en één rij-actie per taak. Projecten, Inzet, Urenstaten, Personeel, Afwezigheid, Materiaal, Inventaris, Facturatie, IT & support en Procedures werken alle op dezelfde manier: toevoegen, bewerken en verwijderen met bevestiging. Een kolom die in elke zichtbare rij leeg is, valt weg. Inzet koppelt een medewerker aan een project met periode, rol en uren per week; de rijtitel wordt afgeleid uit medewerker en project, zodat die een hernoemd project volgt in plaats van te verouderen.
 
 Personeel heeft naam, functie, contactgegevens en lokale bestandsbijlagen achter de rij-actie **Bestanden**. Sla eerst de medewerker op, voeg vervolgens een cv (PDF/DOC/DOCX) of certificaat (PDF/JPG/PNG) toe. Maximaal 10 MB per bestand; certificaten ondersteunen naam en optionele geldigheidsdatum. Bestanden zijn te downloaden en met bevestiging te verwijderen. Een medewerker of project kan niet worden verwijderd zolang er uren- of inzetregistraties aan hangen; verwijder bij personeel eerst alle bijlagen, zodat geen persoonsgegevens achterblijven zonder zichtbare eigenaar.
 
@@ -35,6 +39,8 @@ Eén getint L-frame draagt de zijbalk en de topbalk; het werk staat op een wit b
 Het dashboard leidt attentiepunten uitsluitend af uit datums die je zelf hebt ingevuld, en splitst ze in verstreken en binnenkort aflopend: projecteinddatums en einde inzet, vervaldatums van open facturen, volgende inspectie van inventaris, benodigd-op van materiaal dat nog nodig is, herzieningsdatum van actuele procedures, een inzet die al begonnen is maar nog op Gepland staat, en de geldigheidsdatum van certificaten. Er worden geen trends, voorspellingen of externe bronnen gebruikt.
 
 ## Opslag en grenzen
+
+De huidige opslag en wat centrale opslag met accounts zou vragen, staan in [OPSLAG.md](OPSLAG.md).
 
 - **Alleen opgeslagen in deze browser.** Tekstgegevens staan in localStorage (`qunited.records.v1`); bestanden als blobs in IndexedDB (`qunited-files`). Geen base64-bestanden in localStorage.
 - Geen backend, accounts, autorisatie, synchronisatie of centrale upload. Persoonsgegevens worden niet verzonden. Geen externe fonts of analytics. Documentlinks openen alleen wanneer je er zelf op klikt.

@@ -6,7 +6,7 @@ export function safeUrl(value) {
 }
 
 export const modules = {
- projecten:{title:'Projecten',identityLabel:'Project',subField:'client',plural:'projecten',singular:'project',description:'Planning en voortgang van je eigen projecten.',states:['Planning','In uitvoering','Afgerond','Geannuleerd'],period:{start:'start',end:'due'},fields:[f('name','Projectnaam','text',true),f('client','Klant'),f('location','Locatie'),f('owner','Verantwoordelijke'),f('start','Startdatum','date'),f('due','Einddatum','date'),f('progress','Voortgang (%)','number',false,{min:0,max:100,step:1}),f('notes','Notities','textarea')]},
+ projecten:{title:'Projecten',identityLabel:'Project',subField:'client',plural:'projecten',singular:'project',description:'Planning en voortgang van je eigen projecten.',states:['Planning','In uitvoering','Afgerond','Geannuleerd'],period:{start:'start',end:'due'},fields:[f('name','Projectnaam','text',true),f('client','Klant'),f('location','Locatie'),f('owner','Verantwoordelijke'),f('start','Startdatum','date'),f('due','Einddatum','date'),f('progress','Voortgang (%)','number',false,{min:0,max:100,step:1}),f('needed','Benodigde bezetting','number',false,{min:1,max:999,step:1}),f('notes','Notities','textarea')]},
  inzet:{
   title:'Inzet',identityLabel:'Medewerker en project',subField:'role',plural:'inzetregistraties',singular:'inzetregistratie',
   description:'Wie staat op welk project en in welke periode. Alleen je eigen registratie: er wordt niemand ingepland of op de hoogte gebracht.',
@@ -16,6 +16,15 @@ export const modules = {
   titleFields:['employeeId','projectId'],
   period:{start:'start',end:'end'},
   fields:[f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('projectId','Project','reference',true,{source:'projecten'}),f('role','Rol op project'),f('start','Van','date',true),f('end','Tot en met','date'),f('hoursPerWeek','Uren per week','number',false,{min:1,max:80,step:1}),f('notes','Notities','textarea')]
+ },
+ afwezigheid:{
+  title:'Afwezigheid',plural:'afwezigheidsregistraties',singular:'afwezigheidsregistratie',identityLabel:'Medewerker en soort',subField:'notes',
+  description:'Vakantie, ziekte en verlof. Zonder deze registratie telt iemand zonder inzet als beschikbaar, ook als dat niet klopt.',
+  states:['Aangevraagd','Vastgelegd','Vervallen'],
+  derivedName:(record,data)=>`${named(data.personeel,record.employeeId)} — ${record.kind||'Afwezig'}`,
+  titleFields:['employeeId','kind'],
+  period:{start:'start',end:'end'},
+  fields:[f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('kind','Soort','select',false,{options:['Vakantie','Ziek','Verlof','Opleiding']}),f('start','Van','date',true),f('end','Tot en met','date',true),f('notes','Notities','textarea')]
  },
  urenstaten:{title:'Urenstaten',identityLabel:'Omschrijving',plural:'urenregistraties',singular:'urenregistratie',description:'Uren per medewerker en project. Statussen zijn interne registraties, geen formele goedkeuring of verzending.',states:['Concept','Ingediend','Goedgekeurd'],fields:[f('name','Omschrijving','text',true),f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('projectId','Project','reference',true,{source:'projecten'}),f('date','Werkdatum','date',true),f('hours','Uren','number',true,{min:0.01,max:24,step:0.01})]},
  personeel:{title:'Personeel',identityLabel:'Medewerker',subField:'role',plural:'medewerkers',singular:'medewerker',description:'Personeelsgegevens, cv’s en certificaten blijven alleen op dit apparaat in deze browser. Niets wordt centraal geüpload.',states:['Actief','Inactief'],fields:[f('name','Naam','text',true),f('role','Functie'),f('email','E-mailadres','email'),f('phone','Telefoon'),f('notes','Notities','textarea')]},

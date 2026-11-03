@@ -21,7 +21,7 @@ const MAX_COLUMNS = 4;
 const NAV_GROUPS = [
  ['Overzicht', ['dashboard', 'rapportages']],
  ['Werk', ['projecten', 'inzet', 'urenstaten']],
- ['Mensen', ['personeel']],
+ ['Mensen', ['personeel', 'afwezigheid']],
  ['Middelen', ['materiaal', 'inventaris']],
  ['Administratie', ['facturatie', 'support', 'procedures']],
 ];
@@ -54,7 +54,9 @@ function App() {
   return () => removeEventListener('hashchange', change);
  }, []);
 
- const [route, action] = hash.split('/');
+ const [path, search] = hash.split('?');
+ const [route, action] = path.split('/');
+ const params = new URLSearchParams(search || '');
  const page = route || 'dashboard';
 
  // Zolang de bestaande opslag niet gelezen kan worden, schrijven we niets weg.
@@ -101,7 +103,9 @@ function App() {
      {page === 'dashboard' ? <Dashboard data={data} />
       : page === 'rapportages' ? <Reports data={data} />
        : page === 'backup' ? <Backup data={data} onRestore={write} readOnly={!!initial.error} />
-        : modules[page] ? <Module key={page} id={page} data={data} records={data[page]} openNew={action === 'nieuw'} save={records => write({ ...data, [page]: records })} />
+        : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}
+         openNew={action === 'nieuw'} fromStatus={params.get('status') || ''} fromQuery={params.get('zoek') || ''}
+         save={records => write({ ...data, [page]: records })} />
          : <><h1>Pagina niet gevonden</h1><p className="muted"><a href="#/dashboard">Naar dashboard</a></p></>}
     </div>
    </div>
@@ -109,10 +113,11 @@ function App() {
  </div>;
 }
 
-function Module({ id, data, records, save, openNew }) {
+function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery = '' }) {
  const m = modules[id];
  const iso = isoToday();
- const [query, setQuery] = useState(''), [status, setStatus] = useState('');
+ const [query, setQuery] = useState(fromQuery);
+ const [status, setStatus] = useState(m.states.includes(fromStatus) ? fromStatus : '');
  const [draft, setDraft] = useState(() => openNew ? { status: m.states[0] } : null);
  const [message, setMessage] = useState(''), [deleteError, setDeleteError] = useState('');
  const [openFiles, setOpenFiles] = useState('');
@@ -212,13 +217,13 @@ function Module({ id, data, records, save, openNew }) {
    </div>
   </div>
 
-  {!!missing.length && <div className="empty">
-   <p>Voeg eerst {sentence(missing.map(source => modules[source].plural))} toe.</p>
-   <p>{missing.map((source, index) => <React.Fragment key={source}>
+  {!!missing.length && <p className="empty-line">
+   Voeg eerst {sentence(missing.map(source => modules[source].plural))} toe.{' '}
+   {missing.map((source, index) => <React.Fragment key={source}>
     {index > 0 && ' · '}
     <a href={`#/${source}`}>{capitalise(modules[source].plural)} toevoegen</a>
-   </React.Fragment>)}</p>
-  </div>}
+   </React.Fragment>)}
+  </p>}
 
   {draft && <form onSubmit={submit} className="editor">
    <h2>{draft.id ? 'Registratie bewerken' : 'Nieuwe registratie'}</h2>
@@ -299,10 +304,9 @@ function Module({ id, data, records, save, openNew }) {
      </React.Fragment>)}
     </tbody>
    </table></div>
-   : <div className="empty">
-    <p>{records.length ? 'Geen resultaten voor deze zoekterm of status.' : 'Nog geen registraties.'}</p>
-    <p>{records.length ? 'Pas je zoekterm of statusfilter aan.' : 'Voeg je eerste registratie toe om te beginnen.'}</p>
-   </div>}
+   : records.length
+    ? <p className="empty-line">Geen resultaten voor deze zoekterm of status. <button type="button" className="text-action" onClick={() => { setQuery(''); setStatus(''); }}>Wis de filters</button></p>
+    : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => { setDraft({ status: m.states[0] }); setMessage(''); }}>Voeg de eerste toe</button></p>}
  </>;
 }
 

@@ -26,8 +26,11 @@
  /* Het merkoranje haalt 2,98:1 op wit; de data krijgt de donkerdere stap op 4,0:1. */
  --accent: #cc5f1b;
  --brand: #e8762a;
- --primary: #1b2733;
+ --primary: #b3561a;
  --primary-ink: #ffffff;
+ --primary-hover: #9c4a12;
+ --selected-bg: #fdefe5;
+ --selected-ink: #8c3f0c;
  --positive: #1e7b4f;
  --negative: #c4242a;
  --warning: #92400e;
@@ -59,7 +62,7 @@
  --nav-row: 32px;
  --fs-title: 22px;
  --fs-section: 16px;
- --fs-kpi: 24px;
+ --fs-kpi: 30px;
  --fs-body: 14px;
  --fs-small: 12px;
 
@@ -99,12 +102,13 @@
 .sidebar nav a {
  display: flex; align-items: center; min-height: var(--nav-row);
  padding: 0 9px; border-radius: 7px;
+ border-left: 3px solid transparent;
  color: var(--muted); text-decoration: none;
  font-size: var(--fs-body);
  transition: background-color 150ms ease, color 150ms ease;
 }
 .sidebar nav a:hover { background: var(--raised); color: var(--text); }
-.sidebar nav a[aria-current] { background: var(--active); color: var(--text); font-weight: 500; }
+.sidebar nav a[aria-current] { background: var(--selected-bg); color: var(--selected-ink); font-weight: 600; border-left-color: var(--primary); }
 .sidebar .bottom { margin-top: auto; padding-top: 20px; }
 
 .main-area { display: flex; flex-direction: column; min-width: 0; }
@@ -160,7 +164,7 @@
 .kpi-label, .kpi-value, .kpi-note { display: block; }
 .kpi-label { color: var(--muted); font-size: var(--fs-body); }
 .kpi-value { margin-top: 5px; white-space: nowrap; font-size: var(--fs-kpi); line-height: 1.1; font-weight: 400; letter-spacing: -0.01em; color: var(--text); overflow-wrap: anywhere; }
-.kpi-value small { font-size: 0.5em; color: var(--muted); margin-left: 3px; font-family: var(--font); }
+.kpi-value small { font-size: 0.52em; color: var(--muted); margin-left: 4px; font-weight: 400; }
 .kpi-note { margin-top: 6px; color: var(--faint); font-size: var(--fs-small); }
 
 /* ---------- attentiepunten: rijen met een statusrail, geen kaartjes ---------- */
@@ -181,6 +185,7 @@
 
 /* ---------- tabellen: lijnen en uitlijning ---------- */
 .table-wrap { overflow-x: auto; }
+.table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 table { width: 100%; border-collapse: collapse; }
 th {
  height: 34px; padding: 0 12px 0 0; text-align: left;
@@ -191,6 +196,9 @@ td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--rule); vertical-a
 tbody tr:last-child td { border-bottom: 0; }
 th:last-child, td:last-child { padding-right: 0; }
 th.n, td.n { text-align: right; }
+/* Datums en bedragen breken niet af: een kolom wordt liever breder dan een label over twee regels. */
+td.num, th.n { white-space: nowrap; }
+td.num .sub { white-space: normal; }
 td .sub { display: block; margin-top: 3px; font-size: var(--fs-small); color: var(--muted); }
 td.identity { font-weight: 500; }
 .row-actions { display: flex; justify-content: flex-end; gap: 14px; white-space: nowrap; }
@@ -221,9 +229,9 @@ button, .primary {
 }
 button:hover:not(:disabled) { background: var(--raised); }
 button:active:not(:disabled) { transform: translateY(1px); }
-button:disabled { color: #767c82; background: var(--raised); cursor: not-allowed; }
+button:disabled { color: var(--muted); background: var(--raised); cursor: not-allowed; }
 .primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
-.primary:hover:not(:disabled) { background: #26333f; }
+.primary:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
 .danger { color: var(--negative); }
 button.danger:hover:not(:disabled) { background: var(--pill-negative-bg); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
@@ -345,3 +353,86 @@ a { color: inherit; }
  .toolbar .count { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; } }
+
+
+/* ---------- kerncijfers die doorklikken ---------- */
+.kpi-link {
+ display: block; width: 100%; height: auto; min-height: 0; text-align: left;
+ border: 0; border-radius: 0; background: var(--surface); color: inherit;
+ font: inherit; cursor: pointer; text-decoration: none;
+}
+.kpi-link:hover:not(:disabled) { background: var(--raised); }
+.kpi-link.is-active { background: var(--selected-bg); }
+.kpi-link.is-active .kpi-label { color: var(--selected-ink); }
+.kpi-period { display: block; margin-top: 2px; color: var(--faint); font-size: var(--fs-small); }
+.kpi-note { min-height: 1.25em; }
+
+/* ---------- actiepunten als lijst met taken ---------- */
+.actions-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.action + .action { border-top: 1px solid var(--rule); }
+.action > a {
+ display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline;
+ padding: 11px 0 11px 11px; border-left: 3px solid var(--chart-muted); text-decoration: none; color: var(--text);
+}
+.action > a:hover { background: var(--raised); }
+.action b { font-weight: 500; overflow-wrap: anywhere; }
+.action-context { grid-column: 1; color: var(--muted); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.action-due { grid-row: 1; grid-column: 2; color: var(--muted); font-size: var(--fs-small); white-space: nowrap; }
+.action-due.is-overdue { color: var(--negative); font-weight: 500; }
+.action-hoog > a { border-left-color: var(--negative); }
+.action-middel > a { border-left-color: var(--chart-3); }
+.action-laag > a { border-left-color: var(--chart-muted); }
+
+/* ---------- periodeknoppen boven de planning ---------- */
+.period { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.period button { height: 30px; padding: 0 10px; font-size: var(--fs-small); }
+.segmented { display: inline-flex; padding: 2px; border-radius: var(--radius-control); background: var(--raised); border: 1px solid var(--border); }
+.segmented button { height: 26px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: var(--fs-small); }
+.segmented button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 600; }
+.panel-period { margin: -6px 0 12px; color: var(--faint); font-size: var(--fs-small); }
+
+/* ---------- startchecklist ---------- */
+.checklist { margin-bottom: var(--gap); }
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: var(--fs-body); }
+.steps li.done { color: var(--muted); text-decoration: line-through; }
+
+/* ---------- compacte lege regel in plaats van een groot stippelkader ---------- */
+.empty-line { color: var(--muted); font-size: var(--fs-body); padding: 10px 0; }
+.empty-line a, .empty-line .text-action { color: var(--text); font-weight: 500; }
+.shortfall { color: var(--negative); font-weight: 500; font-variant-numeric: tabular-nums; font-family: var(--font-num); white-space: nowrap; }
+.shortfall .sub { color: var(--negative); font-family: var(--font); font-weight: 400; }
+
+/* ---------- Nieuw-menu ---------- */
+.menu-wrap { position: relative; }
+.menu {
+ position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; min-width: 190px;
+ display: grid; padding: 6px; background: var(--surface);
+ border: 1px solid var(--border); border-radius: var(--radius-control);
+ box-shadow: 0 10px 26px rgba(20, 29, 38, 0.12);
+}
+.menu a { padding: 8px 10px; border-radius: 4px; text-decoration: none; color: var(--text); font-size: var(--fs-body); }
+.menu a:hover { background: var(--raised); }
+
+.overview-grid.lower { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: var(--gap); }
+.card-link { font-size: var(--fs-body); font-weight: 500; color: var(--text); text-decoration: none; }
+.card-link:hover { text-decoration: underline; }
+.panel > header { flex-wrap: wrap; }
+
+@media (max-width: 1120px) {
+ .overview-grid.lower { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+ .kpi-period { font-size: 11px; }
+ .period { width: 100%; }
+ .action > a { grid-template-columns: 1fr; }
+ .action-due { grid-row: auto; grid-column: 1; }
+}
+
+/* ---------- tabellen als rijen van twee regels op een telefoon ---------- */
+.stack { list-style: none; margin: 0; padding: 0; display: grid; }
+.stack > li { padding: 12px 0; }
+.stack > li + li { border-top: 1px solid var(--rule); }
+.stack-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.stack-head a { font-weight: 500; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
+.stack-head .num { font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
+.stack-sub { margin-top: 3px; color: var(--muted); font-size: var(--fs-small); overflow-wrap: anywhere; }

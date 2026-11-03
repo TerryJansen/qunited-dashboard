@@ -27,7 +27,7 @@ test('mobile navigation, the folded menu, the overview and history',async({page}
  await navigate(page,'Projecten');
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Eigen project');await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await navigate(page,'Dashboard');
- await expect(page.getByRole('table',{name:'Projecten in uitvoering'})).toContainText('Eigen project');
+ await expect(page.getByLabel('Lopende en geplande projecten')).toContainText('Eigen project');
  await page.goBack();await expect(page.getByRole('heading',{name:'Projecten',exact:true})).toBeVisible();
  await page.goForward();await expect(page.getByRole('heading',{name:'Overzicht',exact:true})).toBeVisible();
  for(const name of ['Materiaal','Inventaris','Facturatie','IT & support','Procedures','Personeel']){

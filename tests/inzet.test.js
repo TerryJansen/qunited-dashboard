@@ -51,7 +51,7 @@ test('the cover timeline and the occupancy report separate busy from available s
  const today=new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
  await seed(page,{...base,inzet:[{id:'i1',name:'Ada — Project A',status:'Actief',employeeId:'e1',projectId:'p1',start:'2020-01-01',end:'2099-12-31'}]});
  await page.goto('/#/dashboard');
- await expect(page.getByTestId('assignment-count')).toHaveText('1');
+ await expect(page.getByTestId('deployed-count')).toContainText('1');
  await expect(page.getByTestId('available-count')).toHaveText('1');
  // de bezettingsbalk noemt beide medewerkers, met de vrije bovenaan
  const cover=page.getByLabel(/Bezetting van 2 medewerkers/);
