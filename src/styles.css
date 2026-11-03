@@ -472,3 +472,23 @@ a { color: inherit; }
 .notice.info { background: var(--raised); color: var(--text); border: 1px solid var(--border); }
 .notice a { color: inherit; font-weight: 600; text-underline-offset: 3px; }
 .notice b { font-weight: 600; }
+
+/* Hulp: een rustig gesprek, grote letters, geen opsmuk. */
+.assistant-setup ol { margin: 12px 0 16px; padding-left: 22px; line-height: 1.7; }
+.assistant-setup p { max-width: 70ch; }
+.assistant-setup label { max-width: 420px; }
+.chat { display: grid; gap: 12px; margin-bottom: 16px; max-width: 760px; }
+.chat-start p { margin: 0 0 12px; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
+.suggestions button { height: auto; min-height: 40px; padding: 8px 14px; text-align: left; white-space: normal; }
+.bubble { border: 1px solid var(--border); border-radius: var(--radius-card); padding: 12px 14px; background: var(--surface); }
+.bubble.mine { background: var(--raised); justify-self: end; max-width: 85%; }
+.bubble.theirs { justify-self: start; max-width: 100%; }
+.bubble .who { display: block; font-size: var(--fs-small); color: var(--muted); margin-bottom: 4px; }
+.bubble p { margin: 0; white-space: pre-wrap; line-height: 1.6; overflow-wrap: anywhere; }
+.ask { max-width: 760px; }
+.ask .notice { margin: 12px 0 0; }
+.assistant-foot { margin-top: 20px; }
+@media (max-width: 860px) { .bubble.mine { max-width: 100%; } }
+.assistant-setup h2 { margin-bottom: 8px; }
+.assistant-setup a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }

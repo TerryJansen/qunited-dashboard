@@ -7,6 +7,7 @@ import './styles.css';
 import Reports from './Reports';
 import Dashboard from './Dashboard';
 import Backup from './Backup';
+import Assistant from './Assistant';
 import Attachments, { getAttachments } from './Attachments';
 import Detail from './Detail';
 import RecordForm from './RecordForm';
@@ -14,7 +15,7 @@ import { money, formatDate, plural, number } from './format';
 import { isoToday } from './alerts';
 import { requestPersistence } from './persist';
 
-const PAGES = { rapportages: 'Rapportages', backup: 'Back-up' };
+const PAGES = { rapportages: 'Rapportages', backup: 'Back-up', hulp: 'Hulp' };
 const titleOf = (key, record, data) => modules[key].derivedName ? modules[key].derivedName(record, data) : record.name;
 const sentence = items => items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} en ${items.at(-1)}`;
 const capitalise = text => text.charAt(0).toUpperCase() + text.slice(1);
@@ -90,6 +91,7 @@ function App() {
    <div className="bottom">
     <nav aria-label="Beheer">
      <a href="#/backup" aria-current={page === 'backup' ? 'page' : undefined}>Back-up</a>
+     <a href="#/hulp" aria-current={page === 'hulp' ? 'page' : undefined}>Hulp</a>
     </nav>
    </div>
   </aside>
@@ -109,6 +111,7 @@ function App() {
      {page === 'dashboard' ? <Dashboard data={data} />
       : page === 'rapportages' ? <Reports data={data} />
        : page === 'backup' ? <Backup data={data} onRestore={write} readOnly={!!initial.error} />
+       : page === 'hulp' ? <Assistant data={data} />
         : modules[page] && action && action !== 'nieuw'
          ? <Detail key={`${page}/${action}`} id={page} recordId={action} data={data} save={records => write({ ...data, [page]: records })} />
          : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}
