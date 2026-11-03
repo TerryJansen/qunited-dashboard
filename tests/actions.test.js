@@ -35,7 +35,9 @@ test('actions are concrete, sorted by urgency and link to the right screen',asyn
  await expect(page.getByLabel('Actiepunten')).toContainText('3 van de 3 plekken nog niet ingevuld');
  await expect(page.getByLabel('Actiepunten')).toContainText('urenstaat wacht op beoordeling');
  await actions.filter({hasText:'F-100'}).click();
- await expect(page.getByRole('heading',{name:'Facturatie',exact:true})).toBeVisible();
+ // het actiepunt opent de factuur zelf, niet alleen de lijst
+ await expect(page.getByRole('heading',{name:'F-100',exact:true})).toBeVisible();
+ await expect(page.locator('.crumbs').getByRole('link',{name:'Facturatie'})).toBeVisible();
 });
 
 test('a missing timesheet on a worked day becomes an action',async({page})=>{

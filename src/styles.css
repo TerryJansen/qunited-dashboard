@@ -108,7 +108,7 @@
  transition: background-color 150ms ease, color 150ms ease;
 }
 .sidebar nav a:hover { background: var(--raised); color: var(--text); }
-.sidebar nav a[aria-current] { background: var(--selected-bg); color: var(--selected-ink); font-weight: 600; border-left-color: var(--primary); }
+.sidebar nav a[aria-current] { background: var(--active); color: var(--text); font-weight: 600; border-left-color: var(--primary); }
 .sidebar .bottom { margin-top: auto; padding-top: 20px; }
 
 .main-area { display: flex; flex-direction: column; min-width: 0; }
@@ -362,8 +362,7 @@ a { color: inherit; }
  font: inherit; cursor: pointer; text-decoration: none;
 }
 .kpi-link:hover:not(:disabled) { background: var(--raised); }
-.kpi-link.is-active { background: var(--selected-bg); }
-.kpi-link.is-active .kpi-label { color: var(--selected-ink); }
+.kpi-link.is-active { background: var(--active); box-shadow: inset 0 -3px var(--primary); }
 .kpi-period { display: block; margin-top: 2px; color: var(--faint); font-size: var(--fs-small); }
 .kpi-note { min-height: 1.25em; }
 
@@ -436,3 +435,33 @@ a { color: inherit; }
 .stack-head a { font-weight: 500; color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
 .stack-head .num { font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
 .stack-sub { margin-top: 3px; color: var(--muted); font-size: var(--fs-small); overflow-wrap: anywhere; }
+
+/* ---------- detailpagina ---------- */
+.crumbs { margin-bottom: 10px; color: var(--muted); font-size: var(--fs-small); }
+.crumbs a { color: var(--muted); text-underline-offset: 3px; }
+.crumbs a:hover { color: var(--text); }
+.crumbs span[aria-hidden] { margin: 0 7px; color: #a7b2bd; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 20px; margin: 0; }
+.detail-grid dt { color: var(--muted); font-size: var(--fs-small); }
+.detail-grid dd { margin: 3px 0 0; font-size: var(--fs-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.title-row .sub .pill { margin-right: 8px; }
+
+/* ---------- rustiger op de telefoon: grotere letters, meer lucht, minder regels ---------- */
+@media (max-width: 860px) {
+ :root { --fs-body: 15px; --fs-small: 13px; --fs-kpi: 26px; }
+ .canvas { padding: 18px 16px 40px; }
+ .panel { padding: 16px; }
+ .overview-grid, .overview-grid.lower { gap: 14px; }
+ .overview-grid.lower { margin-top: 14px; }
+ .kpi { padding: 14px 16px; }
+ .kpi-note { font-size: 13px; }
+ .title-row h1 { font-size: 26px; }
+ .stack > li { padding: 14px 0; }
+ .stack-head a { font-size: 16px; }
+ .action > a { padding: 14px 0 14px 12px; }
+ .action b { font-size: 15px; }
+ /* vingermaat voor knoppen en rijen */
+ button, .primary { min-height: 46px; padding: 0 16px; }
+ .sidebar nav a { min-height: 46px; }
+ .tabs button { padding: 13px 0; }
+}

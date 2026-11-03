@@ -90,7 +90,7 @@ export function collectActions(data, certificates = [], iso = isoToday()) {
    what: `${short} van de ${needed} plekken nog niet ingevuld`,
    context: `${project.name}${project.client ? ` · ${project.client}` : ''} · ${filled} ingepland`,
    date: project.start || '',
-   href: `#/inzet/nieuw`,
+   href: `#/projecten/${project.id}`,
    action: 'Inzet plannen',
   });
  }
@@ -107,7 +107,7 @@ export function collectActions(data, certificates = [], iso = isoToday()) {
    what: `${overdue ? 'Certificaat verlopen' : 'Certificaat verloopt'}: ${certificate.title || certificate.name}`,
    context: person,
    date: certificate.expiry,
-   href: `#/personeel?zoek=${encodeURIComponent(person)}`,
+   href: certificate.personId ? `#/personeel/${certificate.personId}` : '#/personeel',
    action: 'Bekijken',
   });
  }
@@ -126,7 +126,7 @@ export function collectActions(data, certificates = [], iso = isoToday()) {
     what: `${overdue ? rule.overdueWhat : rule.what}: ${titleOf(rule.module, record, data)}`,
     context: `${record.client || record.owner || modules[rule.module].title}${extra}`,
     date,
-    href: `#/${rule.module}?zoek=${encodeURIComponent(record.name)}`,
+    href: `#/${rule.module}/${record.id}`,
     action: 'Openen',
    });
   }

@@ -8,6 +8,8 @@ import Reports from './Reports';
 import Dashboard from './Dashboard';
 import Backup from './Backup';
 import Attachments, { getAttachments } from './Attachments';
+import Detail from './Detail';
+import RecordForm from './RecordForm';
 import { money, formatDate, plural, number } from './format';
 import { isoToday } from './alerts';
 
@@ -103,9 +105,11 @@ function App() {
      {page === 'dashboard' ? <Dashboard data={data} />
       : page === 'rapportages' ? <Reports data={data} />
        : page === 'backup' ? <Backup data={data} onRestore={write} readOnly={!!initial.error} />
-        : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}
-         openNew={action === 'nieuw'} fromStatus={params.get('status') || ''} fromQuery={params.get('zoek') || ''}
-         save={records => write({ ...data, [page]: records })} />
+        : modules[page] && action && action !== 'nieuw'
+         ? <Detail key={`${page}/${action}`} id={page} recordId={action} data={data} save={records => write({ ...data, [page]: records })} />
+         : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}
+          openNew={action === 'nieuw'} fromStatus={params.get('status') || ''} fromQuery={params.get('zoek') || ''}
+          save={records => write({ ...data, [page]: records })} />
          : <><h1>Pagina niet gevonden</h1><p className="muted"><a href="#/dashboard">Naar dashboard</a></p></>}
     </div>
    </div>
@@ -119,7 +123,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  const [query, setQuery] = useState(fromQuery);
  const [status, setStatus] = useState(m.states.includes(fromStatus) ? fromStatus : '');
  const [draft, setDraft] = useState(() => openNew ? { status: m.states[0] } : null);
- const [message, setMessage] = useState(''), [deleteError, setDeleteError] = useState('');
+ const [deleteError, setDeleteError] = useState('');
  const [openFiles, setOpenFiles] = useState('');
 
  // Modules waarnaar deze module verwijst en die nog leeg zijn: zonder die gegevens valt er niets te kiezen.
@@ -136,37 +140,6 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  const columns = m.fields
   .filter(field => !hidden.has(field.key) && field.type !== 'textarea' && shown.some(record => record[field.key]))
   .slice(0, MAX_COLUMNS);
-
- function problemWith(record) {
-  for (const field of m.fields) {
-   const value = record[field.key];
-   if (field.required && !value) return 'Vul alle verplichte velden in.';
-   if (field.type === 'number' && value !== '' && value !== undefined) {
-    const amount = Number(value);
-    const min = field.min ?? -Infinity, max = field.max ?? Infinity;
-    if (!Number.isFinite(amount) || amount < min || amount > max) {
-     return `Vul bij ${field.label} een getal in van ${field.min ?? '0'} tot ${field.max ?? 'de toegestane waarde'}.`;
-    }
-   }
-   if (field.source && value && !data[field.source].some(option => option.id === value)) {
-    return `Kies een bestaande ${modules[field.source].singular}.`;
-   }
-  }
-  if (m.period && record[m.period.start] && record[m.period.end] && record[m.period.end] < record[m.period.start]) {
-   return 'Einddatum mag niet vóór de startdatum liggen.';
-  }
-  return m.validate ? m.validate(record, data) : '';
- }
-
- function submit(event) {
-  event.preventDefault();
-  const clean = Object.fromEntries(Object.entries(draft).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]));
-  const problem = problemWith(clean);
-  if (problem) { setMessage(problem); return; }
-  if (m.derivedName) clean.name = m.derivedName(clean, data);
-  const next = draft.id ? records.map(record => record.id === draft.id ? clean : record) : [...records, { ...clean, id: crypto.randomUUID() }];
-  if (save(next)) { setDraft(null); setMessage(''); }
- }
 
  async function remove(record) {
   if (!confirm(`“${titleOf(id, record, data)}” verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
@@ -213,7 +186,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
     <p className="sub">{m.description}</p>
    </div>
    <div className="title-actions">
-    <button className="primary" onClick={() => { setDraft({ status: m.states[0] }); setMessage(''); }}>Toevoegen</button>
+    <button className="primary" onClick={() => setDraft({ status: m.states[0] })}>Toevoegen</button>
    </div>
   </div>
 
@@ -225,38 +198,15 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
    </React.Fragment>)}
   </p>}
 
-  {draft && <form onSubmit={submit} className="editor">
-   <h2>{draft.id ? 'Registratie bewerken' : 'Nieuwe registratie'}</h2>
-   <p className="muted">Velden met * zijn verplicht.</p>
-   <div className="form-grid">
-    {m.fields.map(field => <label key={field.key}>
-     {field.label}{field.required && <span aria-hidden="true"> *</span>}
-     {field.type === 'reference'
-      ? <select aria-label={field.label} required={field.required} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })}>
-       <option value="">Kies {field.label.toLowerCase()}</option>
-       {data[field.source].map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
-      </select>
-      : field.type === 'textarea'
-       ? <textarea aria-label={field.label} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })} />
-       : field.type === 'select'
-        ? <select aria-label={field.label} value={draft[field.key] || field.options[0]} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })}>
-         {field.options.map(option => <option key={option}>{option}</option>)}
-        </select>
-        : <input aria-label={field.label} type={field.type} required={field.required} min={field.min} max={field.max} step={field.step} maxLength={1000}
-         value={draft[field.key] ?? ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })} />}
-    </label>)}
-    <label>Status
-     <select aria-label="Status" value={draft.status} onChange={event => setDraft({ ...draft, status: event.target.value })}>
-      {m.states.map(state => <option key={state}>{state}</option>)}
-     </select>
-    </label>
-   </div>
-   {message && <p role="alert" className="error">{message}</p>}
-   <div className="actions">
-    <button className="primary" type="submit">Opslaan</button>
-    <button type="button" onClick={() => setDraft(null)}>Annuleren</button>
-   </div>
-  </form>}
+  {draft && <RecordForm
+   id={id} data={data} draft={draft} setDraft={setDraft}
+   onCancel={() => setDraft(null)}
+   onSave={clean => {
+    const next = draft.id ? records.map(record => record.id === draft.id ? clean : record) : [...records, { ...clean, id: crypto.randomUUID() }];
+    const saved = save(next);
+    if (saved) setDraft(null);
+    return saved;
+   }} />}
 
   <div className="tabs" role="tablist" aria-label="Filter op status">
    <button role="tab" aria-selected={status === ''} onClick={() => setStatus('')}>Alle {records.length}</button>
@@ -283,7 +233,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
      {shown.map(record => <React.Fragment key={record.id}>
       <tr className={openFiles === record.id ? 'expanded' : undefined}>
        <td className="identity">
-        {titleOf(id, record, data)}
+        <a href={`#/${id}/${record.id}`}>{titleOf(id, record, data)}</a>
         {m.subField && record[m.subField] && <span className="sub">{record[m.subField]}</span>}
        </td>
        {columns.map(field => <td key={field.key} className={numeric(field) ? 'n num' : undefined}>{cell(field, record)}</td>)}
@@ -293,7 +243,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
          {id === 'personeel' && <button className="text-action" onClick={() => setOpenFiles(open => open === record.id ? '' : record.id)}>
           {openFiles === record.id ? 'Bestanden sluiten' : 'Bestanden'}
          </button>}
-         <button className="text-action" onClick={() => { setDraft({ ...record }); setMessage(''); scrollTo(0, 0); }}>Bewerken</button>
+         <button className="text-action" onClick={() => { setDraft({ ...record }); scrollTo(0, 0); }}>Bewerken</button>
          <button className="text-action danger" onClick={() => remove(record)}>Verwijderen</button>
         </div>
        </td>
@@ -306,7 +256,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
    </table></div>
    : records.length
     ? <p className="empty-line">Geen resultaten voor deze zoekterm of status. <button type="button" className="text-action" onClick={() => { setQuery(''); setStatus(''); }}>Wis de filters</button></p>
-    : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => { setDraft({ status: m.states[0] }); setMessage(''); }}>Voeg de eerste toe</button></p>}
+    : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => setDraft({ status: m.states[0] })}>Voeg de eerste toe</button></p>}
  </>;
 }
 

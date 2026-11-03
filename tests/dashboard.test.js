@@ -8,7 +8,7 @@ test('starts empty and honest',async({page})=>{
  await expect(page.getByTestId('available-count')).toHaveText('0');
  await expect(page.getByTestId('submitted-count')).toHaveText('0');
  await expect(page.getByTestId('invoice-total')).toContainText('0,00');
- await expect(page.getByText('Nog geen actieve medewerkers vastgelegd.')).toBeVisible();
+ await expect(page.getByText('Nog geen actieve medewerkers.')).toBeVisible();
  await expect(page.getByTestId('actions-unknown')).toBeVisible();
  // de startchecklist wijst naar de drie eerste schermen
  const checklist=page.getByRole('region',{name:'Werkruimte inrichten'});

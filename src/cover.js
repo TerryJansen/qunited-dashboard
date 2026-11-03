@@ -86,7 +86,7 @@ export function coverRows(data, window, iso = isoToday(), { onlyAvailable = fals
      kind: KIND_OF[item.status],
      label: project?.name || 'Verwijderd project',
      note: [item.role, item.hoursPerWeek ? `${item.hoursPerWeek} uur per week` : ''].filter(Boolean).join(' · '),
-     href: `#/inzet?zoek=${encodeURIComponent(person.name)}`,
+     href: project ? `#/projecten/${project.id}` : `#/inzet/${item.id}`,
     };
    }),
    ...data.afwezigheid.filter(item => item.employeeId === person.id && item.status !== 'Vervallen').map(item => ({
@@ -95,7 +95,7 @@ export function coverRows(data, window, iso = isoToday(), { onlyAvailable = fals
     kind: 'afwezig',
     label: item.kind || 'Afwezig',
     note: item.status,
-    href: `#/afwezigheid?zoek=${encodeURIComponent(person.name)}`,
+    href: `#/afwezigheid/${item.id}`,
    })),
   ].filter(bar => bar.to >= 0 && bar.from < window.days.length);
 
@@ -108,7 +108,7 @@ export function coverRows(data, window, iso = isoToday(), { onlyAvailable = fals
    bars,
    state: deployed ? 'ingezet' : absent ? 'afwezig' : 'beschikbaar',
    freeOn: deployed ? freeFrom(data, person.id, iso) : iso,
-   href: `#/personeel?zoek=${encodeURIComponent(person.name)}`,
+   href: `#/personeel/${person.id}`,
   };
  });
  const order = { beschikbaar: 0, afwezig: 1, ingezet: 2 };
