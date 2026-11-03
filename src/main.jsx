@@ -12,6 +12,7 @@ import Detail from './Detail';
 import RecordForm from './RecordForm';
 import { money, formatDate, plural, number } from './format';
 import { isoToday } from './alerts';
+import { requestPersistence } from './persist';
 
 const PAGES = { rapportages: 'Rapportages', backup: 'Back-up' };
 const titleOf = (key, record, data) => modules[key].derivedName ? modules[key].derivedName(record, data) : record.name;
@@ -64,8 +65,11 @@ function App() {
  // Zolang de bestaande opslag niet gelezen kan worden, schrijven we niets weg.
  function write(next) {
   if (initial.error) return false;
-  try { writeData(next); setData(next); setError(''); return true; }
+  try { writeData(next); setData(next); setError(''); }
   catch { setError(WRITE_ERROR); return false; }
+  // Het moment waarop er iets te verliezen valt: vraag de browser het te bewaren.
+  requestPersistence();
+  return true;
  }
 
  const heading = PAGES[page] || modules[page]?.title || 'Dashboard';

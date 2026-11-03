@@ -1,0 +1,16 @@
+{
+  "name": "Qunited werkruimte",
+  "short_name": "Qunited",
+  "description": "Bezetting, urenstaten en facturen van Qunited, op dit apparaat bewaard.",
+  "lang": "nl",
+  "start_url": "./#/dashboard",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#edf0f3",
+  "theme_color": "#edf0f3",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

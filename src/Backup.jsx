@@ -3,6 +3,8 @@ import { modules } from './modules';
 import { migrate, isValid, pickModules, emptyData } from './storage';
 import { getAllAttachments, replaceAllAttachments, clearAttachments, FILE_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_BYTES } from './files';
 import { formatDate, plural, number } from './format';
+import { markBackup, lastBackup, requestPersistence } from './persist';
+import { StorageNotice } from './StorageNotice';
 
 const FORMAT = 'qunited.backup.v1';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -64,6 +66,7 @@ export default function Backup({ data, onRestore, readOnly }) {
     })));
    }
    save(`qunited-backup-${today()}.json`, JSON.stringify(payload));
+   markBackup();
    setNote(`Back-up gedownload: ${plural(recordCount, 'registratie', 'registraties')}${withFiles ? ` en ${plural(payload.attachments.length, 'bestand', 'bestanden')}` : ', zonder bestanden'}.`);
   } catch {
    setError('Back-up maken mislukt. De bestanden konden niet worden gelezen. Er is niets gewijzigd.');
@@ -121,6 +124,7 @@ export default function Backup({ data, onRestore, readOnly }) {
    setBusy(false);
    return;
   }
+  requestPersistence();
   setNote(`Terugzetten gelukt: ${plural(preview.total, 'registratie', 'registraties')} en ${plural(preview.attachments.length, 'bestand', 'bestanden')} staan nu in deze browser.`);
   setPreview(null);
   setBusy(false);
@@ -147,13 +151,15 @@ export default function Backup({ data, onRestore, readOnly }) {
    </div>
   </div>
 
+  <StorageNotice />
   {error && <p role="alert" className="error">{error}</p>}
   {note && <p role="status" className="notice">{note}</p>}
 
   <div className="settings-row">
    <div className="label-col">
     <h2>Back-up downloaden</h2>
-    <p>Het bestand bevat je {plural(recordCount, 'registratie', 'registraties')} en, als je dat aanvinkt, de cv’s en certificaten. Het blijft op je eigen apparaat; er wordt niets verstuurd. Bewaar het als vertrouwelijk: personeelsgegevens staan er leesbaar in.</p>
+    <p>{lastBackup() ? `Laatste back-up: ${formatDate(lastBackup().slice(0, 10))}. ` : 'Je hebt nog geen back-up gemaakt. '}
+     Het bestand bevat je {plural(recordCount, 'registratie', 'registraties')} en, als je dat aanvinkt, de cv’s en certificaten. Het blijft op je eigen apparaat; er wordt niets verstuurd. Bewaar het als vertrouwelijk: personeelsgegevens staan er leesbaar in.</p>
    </div>
    <div className="settings-panel">
     <label className="checkbox">

@@ -5,6 +5,7 @@ import { coverWindow, coverRows, comingFree, occupancy, staffing, COVER_KINDS } 
 import { collectActions, hasSourceData } from './actions';
 import { money, number, formatDate, formatDateLong, plural } from './format';
 import Chart from './Chart';
+import { StorageNotice, BackupReminder } from './StorageNotice';
 
 const VISIBLE_ACTIONS = 4;
 const VISIBLE_PROJECTS = 5;
@@ -82,6 +83,8 @@ export default function Dashboard({ data }) {
    </div>
   </div>
 
+  <StorageNotice />
+  <BackupReminder hasData={!empty} />
   {fileError && <p role="alert" className="notice warn">{fileError}</p>}
 
   {!steps.every(step => step.done) && <section className="panel checklist" aria-label="Werkruimte inrichten">
@@ -117,7 +120,7 @@ export default function Dashboard({ data }) {
   <div className="overview-grid">
    <section className="panel" aria-label="Bezettingsplanning">
     <header>
-     <h2>Bezettingsplanning</h2>
+     <h2>{narrow ? 'Wie staat waar' : 'Bezettingsplanning'}</h2>
      {!narrow && <div className="period">
       <button type="button" onClick={() => setOffset(value => value - 1)}>Vorige</button>
       {offset !== 0 && <button type="button" onClick={() => setOffset(0)}>Vandaag</button>}

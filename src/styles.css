@@ -466,3 +466,9 @@ a { color: inherit; }
  .sidebar nav a { min-height: 46px; }
  .tabs button { padding: 13px 0; }
 }
+
+/* ---------- meldingen over opslag ---------- */
+.notice.warn { background: var(--pill-warning-bg); color: var(--pill-warning-ink); border: 1px solid #fde68a; }
+.notice.info { background: var(--raised); color: var(--text); border: 1px solid var(--border); }
+.notice a { color: inherit; font-weight: 600; text-underline-offset: 3px; }
+.notice b { font-weight: 600; }

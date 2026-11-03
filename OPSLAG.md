@@ -29,6 +29,31 @@ inclusief de bestanden, en kan dat weer inlezen. Terugzetten vervangt de werkrui
 keer en voegt niets toe, dus hetzelfde bestand twee keer inlezen geeft geen dubbele
 registraties. Een back-upbestand is niet versleuteld en bevat personeelsgegevens leesbaar.
 
+## Wat er nu gedaan wordt om verlies te voorkomen
+
+Zonder backend kan de site niet garanderen dat gegevens blijven. Wel is alles gedaan wat
+binnen de browser kan:
+
+- **De browser wordt gevraagd de gegevens te bewaren** (`navigator.storage.persist()`), op het
+  moment dat er voor het eerst iets wordt opgeslagen. Zonder die vraag mag een browser de
+  opslag van een site opruimen.
+- **Op de iPhone kan de site op het beginscherm.** Safari wist de opslag van een site na zeven
+  dagen zonder bezoek; een site op het beginscherm valt daarbuiten. Er is een manifest en een
+  eigen Qunited-icoon, zodat "Zet op beginscherm" een echte app oplevert.
+- **Een eerlijke melding als het niet veilig is.** Op iPhone of iPad buiten het beginscherm
+  staat bovenaan hoe je de site op het beginscherm zet. In een browser die geen blijvende
+  opslag toezegt (een privévenster, de ingebouwde browser van een app) staat dat die browser
+  je gegevens misschien niet bewaart. Is het wél veilig, dan verschijnt er niets.
+- **Een bijlage telt pas als opgeslagen als hij terug te lezen is.** Na het opslaan wordt het
+  bestand meteen weer uit de browser gehaald en vergeleken; pas dan verschijnt
+  "… is opgeslagen".
+- **Een herinnering om een back-up te maken** zodra er gegevens zijn en de laatste back-up
+  ouder is dan zeven dagen, of er nog nooit een was.
+
+**Wat dit niet oplost:** gegevens staan nog steeds op één apparaat in één browser. Wat je op je
+telefoon toevoegt, zie je niet op de laptop, en een collega ziet niets. Dat kan alleen met
+centrale opslag.
+
 ## Wat er nodig is voor centrale opslag
 
 De app blijft op GitHub Pages staan; de opslag verhuist naar een externe dienst die de

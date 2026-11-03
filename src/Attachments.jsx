@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { getAttachments, getAttachment, putAttachment, deleteAttachment, FILE_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_BYTES } from './files';
 import { formatDate } from './format';
+import { requestPersistence } from './persist';
+import { StorageNotice } from './StorageNotice';
 
 export { getAttachments };
 
@@ -8,6 +10,7 @@ const kb = bytes => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 })
 
 export default function Attachments({ personId }) {
  const [files, setFiles] = useState([]), [error, setError] = useState(''), [busy, setBusy] = useState(false);
+ const [saved, setSaved] = useState('');
 
  useEffect(() => {
   getAttachments(personId).then(setFiles)
@@ -25,16 +28,22 @@ export default function Attachments({ personId }) {
    setError('Bestandstype niet toegestaan. Kies de vermelde bestandstypen.'); return;
   }
   if (file.size > MAX_FILE_BYTES) { setError('Het bestand is te groot. Maximaal 10 MB per bestand.'); return; }
-  setBusy(true); setError('');
+  setBusy(true); setError(''); setSaved('');
   try {
+   const id = crypto.randomUUID();
    await putAttachment({
-    id: crypto.randomUUID(), personId, kind, name: file.name, type: FILE_TYPES[extension], size: file.size, blob: file,
+    id, personId, kind, name: file.name, type: FILE_TYPES[extension], size: file.size, blob: file,
     title: String(fields.get('title') || '').trim(), expiry: String(fields.get('expiry') || ''),
    });
+   // Pas "opgeslagen" zeggen als het bestand er ook echt weer uit te halen is.
+   const stored = await getAttachment(id);
+   if (!stored?.blob || stored.blob.size !== file.size) throw new Error('Niet terug te lezen');
+   requestPersistence();
    setFiles(await getAttachments(personId));
+   setSaved(`${file.name} is opgeslagen.`);
    form.reset();
   } catch {
-   setError('Bestand opslaan mislukt. Browseropslag is niet beschikbaar of vol. Probeer opnieuw.');
+   setError('Bestand opslaan mislukt. Het bestand staat niet in deze browser. Probeer opnieuw, of maak eerst ruimte vrij.');
   } finally { setBusy(false); }
  }
 
@@ -60,7 +69,9 @@ export default function Attachments({ personId }) {
  return <section className="attachments">
   <h3>Cv &amp; certificaten</h3>
   <p className="kpi-note">Alleen in deze browser, niet gedeeld met anderen. Bewaar zelf een back-up. Maximaal 10 MB per bestand.</p>
+  <StorageNotice />
   {error && <p className="error" role="alert">{error}</p>}
+  {saved && <p className="notice" role="status">{saved}</p>}
   {files.map(file => <div className="attachment" key={file.id}>
    <div className="file">
     <b>{file.name}</b>
