@@ -51,3 +51,23 @@ test('the real logo is on the login page, in the menu and on the phone bar',asyn
  const fonts=await page.evaluate(async()=>{await document.fonts.ready;return ['Inter','Poppins'].map(f=>document.fonts.check(`500 16px "${f}"`))});
  expect(fonts).toEqual([true,true]);
 });
+
+test('the login page plays the flight film, muted and with a pause button',async({page})=>{
+ await page.goto('/');
+ const film=page.locator('.login-film video');
+ await expect(film).toHaveAttribute('poster','./login-vlucht.jpg');
+ expect(await film.evaluate(v=>v.muted&&v.loop&&v.playsInline)).toBe(true);
+ await expect(page.getByRole('button',{name:/Video (pauzeren|afspelen)/})).toBeVisible();
+ const ok=await page.request.get('/login-vlucht.mp4');
+ expect(ok.ok()).toBe(true);
+});
+
+test('with reduced motion the film does not start by itself',async({browser})=>{
+ const context=await browser.newContext({reducedMotion:'reduce'});
+ const page=await context.newPage();
+ await page.goto('/');
+ await page.waitForTimeout(500);
+ expect(await page.locator('.login-film video').evaluate(v=>v.paused)).toBe(true);
+ await expect(page.getByRole('button',{name:'Video afspelen'})).toBeVisible();
+ await context.close();
+});
