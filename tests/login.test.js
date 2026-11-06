@@ -52,22 +52,11 @@ test('the real logo is on the login page, in the menu and on the phone bar',asyn
  expect(fonts).toEqual([true,true]);
 });
 
-test('the login page plays the flight film, muted and with a pause button',async({page})=>{
+test('the login page has the platform photo behind it, darkened, and nothing that moves',async({page})=>{
  await page.goto('/');
- const film=page.locator('.login-film video');
- await expect(film).toHaveAttribute('poster','./login-vlucht.jpg');
- expect(await film.evaluate(v=>v.muted&&v.loop&&v.playsInline)).toBe(true);
- await expect(page.getByRole('button',{name:/Video (pauzeren|afspelen)/})).toBeVisible();
- const ok=await page.request.get('/login-vlucht.mp4');
- expect(ok.ok()).toBe(true);
-});
-
-test('with reduced motion the film does not start by itself',async({browser})=>{
- const context=await browser.newContext({reducedMotion:'reduce'});
- const page=await context.newPage();
- await page.goto('/');
- await page.waitForTimeout(500);
- expect(await page.locator('.login-film video').evaluate(v=>v.paused)).toBe(true);
- await expect(page.getByRole('button',{name:'Video afspelen'})).toBeVisible();
- await context.close();
+ await expect(page.locator('.login-backdrop')).toHaveAttribute('src','./login-achtergrond.jpg');
+ expect(await page.locator('.login-backdrop').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
+ const shade=await page.locator('.login').evaluate(el=>getComputedStyle(el,'::before').backgroundColor);
+ expect(shade).toBe('rgba(10, 24, 40, 0.68)');
+ await expect(page.locator('video')).toHaveCount(0);
 });
