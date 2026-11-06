@@ -78,3 +78,13 @@ test('an expiring certificate becomes an action for its employee',async({page})=
  await expect(action).toContainText('Ada');
  await expect(action).toHaveClass(/action-hoog/);
 });
+
+test('an action names the responsible person, never an internal id',async({page})=>{
+ await seed(page,{...emptyData(),
+  personeel:[{id:'e2',name:'Bram Kuiper',status:'Actief'}],
+  inventaris:[{id:'v2',name:'Valbeveiligingsset',owner:'e2',due:day(-6),status:'In gebruik'}],
+ });
+ const item=page.locator('.action').filter({hasText:'Valbeveiligingsset'});
+ await expect(item).toContainText('Bram Kuiper');
+ await expect(item).not.toContainText('e2');
+});

@@ -477,7 +477,7 @@
     if (k.mark === 'hatch') return { fill: mix(el, ink, surface, 0.04), hatch: mix(el, ink, surface, 0.32), ...tone, ...dash };
     if (k.mark === 'step') return { fill: mix(el, ink, surface, 0.24), ...tone, ...dash };
     if (k.mark === 'outline') return { fill: surface, stroke: mix(el, ink, surface, 0.55), width: 1, ...tone, ...dash };
-    if (k.mark === 'hue') return { fill: mix(el, hue, surface, 0.18), edge: hue, ...tone, ...dash };
+    if (k.mark === 'hue') return { fill: mix(el, hue, surface, cssNum(el, '--chart-hue-tint', 0.18)), edge: hue, ...tone, ...dash };
     return { fill: mix(el, ink, surface, 0.12), ...tone, ...dash };
   }
   // Who is away when: people (or rooms, vans) down the left, days across, a bar per booking told apart by its kind.

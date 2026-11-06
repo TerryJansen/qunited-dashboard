@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {readFileSync} from 'node:fs';
 import {emptyData} from '../src/modules.js';
-import {seed,navigate} from './helpers.js';
+import {seed,navigate,SIGNED_IN} from './helpers.js';
 
 // De echte dienst wordt nooit aangeroepen: elk verzoek naar Anthropic wordt hier onderschept.
 const API='https://api.anthropic.com/v1/messages';
@@ -114,7 +114,7 @@ test('the key never ends up in a backup, and can be removed',async({page})=>{
 });
 
 test('on a phone the help page fits and the question box is reachable',async({browser})=>{
- const context=await browser.newContext({viewport:{width:390,height:844}});
+ const context=await browser.newContext({storageState:SIGNED_IN,viewport:{width:390,height:844}});
  const page=await context.newPage();
  await page.route(API,route=>route.fulfill(answer('Klik op "Menu" en dan op "Back-up".')));
  await withKey(page);

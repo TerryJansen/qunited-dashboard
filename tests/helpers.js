@@ -33,3 +33,6 @@ export async function openFiles(page, person) {
  await row(page, person).getByRole('button', { name: 'Bestanden', exact: true }).click();
  await expect(page.getByRole('group', { name: 'CV toevoegen' })).toBeVisible();
 }
+
+/** Een eigen browsercontext neemt de standaardinstellingen niet over; zo begint hij ingelogd. */
+export const SIGNED_IN = { cookies: [], origins: [{ origin: 'http://127.0.0.1:4182', localStorage: [{ name: 'qunited.session', value: 'test' }] }] };

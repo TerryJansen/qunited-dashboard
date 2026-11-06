@@ -1,4 +1,4 @@
-import { modules, reference } from './modules';
+import { modules, reference, resolveReference } from './modules';
 import { isoToday, shiftDays } from './alerts';
 import { assignmentRuns, isWeekend, staffing } from './cover';
 import { formatDate, money } from './format';
@@ -6,6 +6,13 @@ import { formatDate, money } from './format';
 const CERTIFICATE_HORIZON = 60;
 const TIMESHEET_LOOKBACK = 7;
 export const URGENCY = { hoog: 0, middel: 1, laag: 2 };
+
+// Een verantwoordelijke is een verwijzing naar een medewerker: toon de naam, nooit het interne id.
+function ownerName(data, value) {
+ if (!value) return '';
+ const link = resolveReference(data, 'personeel', value);
+ return link.kind === 'record' ? link.record.name : link.kind === 'tekst' ? link.text : '';
+}
 
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
 
@@ -124,7 +131,7 @@ export function collectActions(data, certificates = [], iso = isoToday()) {
     id: `${rule.module}-${record.id}`,
     urgency: overdue ? (rule.urgent ? 'hoog' : 'middel') : 'laag',
     what: `${overdue ? rule.overdueWhat : rule.what}: ${titleOf(rule.module, record, data)}`,
-    context: `${record.client || record.owner || modules[rule.module].title}${extra}`,
+    context: `${record.client || ownerName(data, record.owner) || modules[rule.module].title}${extra}`,
     date,
     href: `#/${rule.module}/${record.id}`,
     action: 'Openen',

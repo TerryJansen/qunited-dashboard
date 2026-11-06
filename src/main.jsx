@@ -8,6 +8,9 @@ import Reports from './Reports';
 import Dashboard from './Dashboard';
 import Backup from './Backup';
 import Assistant from './Assistant';
+import Login from './Login';
+import Logo from './Logo';
+import { signedIn, signOut } from './session';
 import Attachments, { getAttachments } from './Attachments';
 import Detail from './Detail';
 import RecordForm from './RecordForm';
@@ -51,6 +54,7 @@ function App() {
  const [error, setError] = useState(initial.error);
  const [hash, setHash] = useState(() => location.hash.slice(2));
  const [menuOpen, setMenuOpen] = useState(false);
+ const [inside, setInside] = useState(signedIn);
 
  useEffect(() => {
   const change = () => { setHash(location.hash.slice(2)); setMenuOpen(false); };
@@ -73,14 +77,15 @@ function App() {
   return true;
  }
 
+ if (!inside) return <Login onEnter={() => setInside(true)} />;
+
  const heading = PAGES[page] || modules[page]?.title || 'Dashboard';
  const vandaag = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
 
  return <div className="app-shell">
   <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="hoofdmenu">
-   <a className="brand" href="#/dashboard">
-    <span className="brand-mark" aria-hidden="true">Q</span>
-    <span className="brand-name">Qunited</span>
+   <a className="brand" href="#/dashboard" aria-label="Qunited, naar het dashboard">
+    <Logo className="brand-logo" title="Qunited" />
    </a>
    <nav aria-label="Hoofdnavigatie">
     {navigation().map(([group, keys]) => <React.Fragment key={group}>
@@ -93,6 +98,7 @@ function App() {
      <a href="#/backup" aria-current={page === 'backup' ? 'page' : undefined}>Back-up</a>
      <a href="#/hulp" aria-current={page === 'hulp' ? 'page' : undefined}>Hulp</a>
     </nav>
+    <button type="button" className="sign-out" onClick={() => { signOut(); setInside(false); }}>Uitloggen</button>
    </div>
   </aside>
 
@@ -100,7 +106,8 @@ function App() {
    <header className="topbar">
     <span className="scope">
      <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="hoofdmenu" onClick={() => setMenuOpen(open => !open)}>Menu</button>
-     <b>Werkruimte</b>
+     <a className="topbar-logo" href="#/dashboard" aria-label="Qunited, naar het dashboard"><Logo className="brand-logo" /></a>
+     <b className="scope-name">Werkruimte</b>
      <span className="long">alleen opgeslagen in deze browser</span>
     </span>
     <span>{vandaag}</span>
