@@ -76,8 +76,8 @@ export default function Reports({ data }) {
 
  function downloadHours() {
   downloadCsv('qunited-uren.csv', [
-   ['Werkdatum', 'Project', 'Medewerker', 'Omschrijving', 'Uren', 'Status'],
-   ...rows.map(r => [r.date, reference(data.projecten, r.projectId), reference(data.personeel, r.employeeId), r.name, String(r.hours).replace('.', ','), r.status]),
+   ['Werkdatum', 'Project', 'Medewerker', 'Omschrijving', 'Uren', 'Pauze (min)', 'Status'],
+   ...rows.map(r => [r.date, reference(data.projecten, r.projectId), reference(data.personeel, r.employeeId), r.name, String(r.hours).replace('.', ','), r.pause ?? '', r.status]),
   ]);
  }
 

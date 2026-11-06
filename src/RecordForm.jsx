@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { modules, looksLikeId } from './modules';
+import { DurationWheel, PauseChoice } from './TimeWheel';
 
 /** Dezelfde validatie voor elke module, zodat een lijst en een detailpagina niet uit elkaar lopen. */
 export function problemWith(id, record, data) {
@@ -7,6 +8,10 @@ export function problemWith(id, record, data) {
  for (const field of m.fields) {
   const value = record[field.key];
   if (field.required && !value) return 'Vul alle verplichte velden in.';
+  if (field.type === 'duration' && value !== '' && value !== undefined) {
+   const amount = Number(value);
+   if (!Number.isFinite(amount) || amount < (field.min ?? 0) || amount > (field.max ?? 24)) return `Kies bij ${field.label} een tijd groter dan 0:00, tot en met 24:00.`;
+  }
   if (field.type === 'number' && value !== '' && value !== undefined) {
    const amount = Number(value);
    const min = field.min ?? -Infinity, max = field.max ?? Infinity;
@@ -43,7 +48,11 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
   <h2>{draft.id ? 'Registratie bewerken' : 'Nieuwe registratie'}</h2>
   <p className="muted">Velden met * zijn verplicht.</p>
   <div className="form-grid">
-   {m.fields.map(field => <label key={field.key}>
+   {m.fields.map(field => field.type === 'duration'
+    ? <DurationWheel key={field.key} label={field.label} required={field.required} value={draft[field.key] ?? ''} onChange={value => setDraft({ ...draft, [field.key]: value })} />
+    : field.type === 'pause'
+    ? <PauseChoice key={field.key} label={field.label} required={field.required} value={draft[field.key] ?? ''} onChange={value => setDraft({ ...draft, [field.key]: value })} />
+    : <label key={field.key}>
     {field.label}{field.required && <span aria-hidden="true"> *</span>}
     {field.type === 'reference'
      ? <select aria-label={field.label} required={field.required} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })}>

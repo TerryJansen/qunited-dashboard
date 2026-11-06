@@ -15,6 +15,7 @@ import Attachments, { getAttachments } from './Attachments';
 import Detail from './Detail';
 import RecordForm from './RecordForm';
 import { money, formatDate, plural, number } from './format';
+import { formatHours, formatPause } from './TimeWheel';
 import { isoToday } from './alerts';
 import { requestPersistence } from './persist';
 
@@ -136,7 +137,8 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  const iso = isoToday();
  const [query, setQuery] = useState(fromQuery);
  const [status, setStatus] = useState(m.states.includes(fromStatus) ? fromStatus : '');
- const [draft, setDraft] = useState(() => openNew ? { status: m.states[0] } : null);
+ const blank = () => ({ status: m.states[0], ...(m.defaults || {}) });
+ const [draft, setDraft] = useState(() => openNew ? blank() : null);
  const [deleteError, setDeleteError] = useState('');
  const [openFiles, setOpenFiles] = useState('');
 
@@ -153,7 +155,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  // Een kolom die in elke zichtbare rij leeg is, valt weg.
  const columns = m.fields
   .filter(field => !hidden.has(field.key) && field.type !== 'textarea' && shown.some(record => record[field.key]))
-  .slice(0, MAX_COLUMNS);
+  .slice(0, m.maxColumns || MAX_COLUMNS);
 
  async function remove(record) {
   if (!confirm(`“${titleOf(id, record, data)}” verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
@@ -193,9 +195,11 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
   if (field.key === 'amount') return money(Number(value));
   if (field.type === 'date') return formatDate(value);
   if (field.type === 'number') return number(Number(value));
+  if (field.type === 'duration') return formatHours(value);
+  if (field.type === 'pause') return formatPause(value);
   return value;
  }
- const numeric = field => field.type === 'number' || field.type === 'date' || field.key === 'amount';
+ const numeric = field => ['number', 'date', 'duration', 'pause'].includes(field.type) || field.key === 'amount';
 
  return <>
   {deleteError && <p role="alert" className="error">{deleteError}</p>}
@@ -205,7 +209,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
     <p className="sub">{m.description}</p>
    </div>
    <div className="title-actions">
-    <button className="primary" onClick={() => setDraft({ status: m.states[0] })}>Toevoegen</button>
+    <button className="primary" onClick={() => setDraft(blank())}>Toevoegen</button>
    </div>
   </div>
 
@@ -275,7 +279,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
    </table></div>
    : records.length
     ? <p className="empty-line">Geen resultaten voor deze zoekterm of status. <button type="button" className="text-action" onClick={() => { setQuery(''); setStatus(''); }}>Wis de filters</button></p>
-    : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => setDraft({ status: m.states[0] })}>Voeg de eerste toe</button></p>}
+    : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => setDraft(blank())}>Voeg de eerste toe</button></p>}
  </>;
 }
 

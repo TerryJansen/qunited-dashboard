@@ -10,22 +10,37 @@ test('Urenstaten validates, cancels, saves references and persists CRUD',async({
  await page.getByLabel('Medewerker',{exact:true}).selectOption('e1');
  await page.getByLabel('Project',{exact:true}).selectOption('p1');
  await page.getByLabel('Werkdatum').fill('2026-11-02');
- for(const value of ['0','25']){await page.getByLabel('Uren',{exact:true}).fill(value);await page.getByRole('button',{name:'Opslaan',exact:true}).click();await expect(row(page,'Installatie')).toHaveCount(0)}
- await page.getByLabel('Uren',{exact:true}).fill('7.5');await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ const hours=page.getByRole('spinbutton',{name:'Uren'}), minutes=page.getByRole('spinbutton',{name:'Minuten'});
+ // een nieuwe regel begint op 8:00 met 30 minuten pauze
+ await expect(hours).toHaveAttribute('aria-valuenow','8');
+ await expect(minutes).toHaveAttribute('aria-valuenow','0');
+ await expect(page.getByRole('radio',{name:'30 min'})).toBeChecked();
+ await hours.focus();await hours.press('Home');
+ await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('groter dan 0:00');
+ await expect(row(page,'Installatie')).toHaveCount(0);
+ for(let i=0;i<7;i++)await hours.press('ArrowUp');
+ await minutes.focus();await minutes.press('ArrowUp');await minutes.press('ArrowUp');
+ await expect(minutes).toHaveAttribute('aria-valuetext','30');
+ await page.getByText('45 min',{exact:true}).click();
+ await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await page.reload();
  const record=row(page,'Installatie');
  await expect(record).toContainText('Ada');
  await expect(record).toContainText('Project A');
- await expect(record).toContainText('7,5');
+ await expect(record).toContainText('7:30');
+ await expect(record).toContainText('45 min');
  await record.getByRole('button',{name:'Bewerken',exact:true}).click();
- await page.getByLabel('Uren',{exact:true}).fill('6');
+ await expect(hours).toHaveAttribute('aria-valuenow','7');
+ await expect(page.getByRole('radio',{name:'45 min'})).toBeChecked();
+ await hours.focus();await hours.press('ArrowDown');
  await page.getByRole('button',{name:'Annuleren',exact:true}).click();
- await expect(record).toContainText('7,5');
+ await expect(record).toContainText('7:30');
  await record.getByRole('button',{name:'Bewerken',exact:true}).click();
- await page.getByLabel('Uren',{exact:true}).fill('6');
+ await hours.focus();await hours.press('ArrowDown');
  await page.getByLabel('Status',{exact:true}).selectOption('Ingediend');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
- await page.reload();await expect(record).toContainText('Ingediend');
+ await page.reload();await expect(record).toContainText('Ingediend');await expect(record).toContainText('6:30');
  await page.getByLabel('Zoeken').fill('Ada');await expect(record).toHaveCount(1);
  await filterStatus(page,'Concept');await expect(record).toHaveCount(0);
  await page.getByRole('button',{name:'Filters wissen'}).click();await expect(record).toHaveCount(1);
@@ -34,4 +49,33 @@ test('Urenstaten validates, cancels, saves references and persists CRUD',async({
  await expect(record).toHaveCount(1);
  page.once('dialog',d=>d.accept());await record.getByRole('button',{name:'Verwijderen',exact:true}).click();
  await page.reload();await expect(page.getByText('Nog geen registraties')).toBeVisible();
+});
+
+test('the hours wheel turns with the mouse wheel and a tap, and 24:00 is the end',async({page})=>{
+ await seed(page,data);
+ await page.goto('/#/urenstaten/nieuw');
+ const hours=page.getByRole('spinbutton',{name:'Uren'}), minutes=page.getByRole('spinbutton',{name:'Minuten'});
+ await expect(hours).toHaveAttribute('aria-valuenow','8');
+ await hours.hover();await page.mouse.wheel(0,44*2);
+ await expect(hours).toHaveAttribute('aria-valuenow','10');
+ await minutes.locator('.wheel-item',{hasText:'45'}).click();
+ await expect(minutes).toHaveAttribute('aria-valuenow','45');
+ await expect(page.getByText('10 uur en 45 minuten')).toBeVisible();
+ await hours.focus();await hours.press('End');
+ await expect(hours).toHaveAttribute('aria-valuenow','24');
+ await expect(minutes).toHaveAttribute('aria-valuenow','0');
+ await expect(page.getByText('24 uur',{exact:true})).toBeVisible();
+});
+
+test('pause is always there, with one tap per choice, also on a phone',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await seed(page,data);
+ await page.goto('/#/urenstaten/nieuw');
+ const group=page.getByRole('group',{name:/Pauze/});
+ for(const name of ['Geen','15 min','30 min','45 min','1 uur'])await expect(group.getByRole('radio',{name})).toBeVisible();
+ await group.getByText('Geen').click();
+ await expect(group.getByRole('radio',{name:'Geen'})).toBeChecked();
+ const box=await group.getByText('1 uur').boundingBox();
+ expect(box.height).toBeGreaterThanOrEqual(44);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

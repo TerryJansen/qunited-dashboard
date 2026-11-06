@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { modules, dependentsOf, safeUrl, resolveReference, subText } from './modules';
 import { money, number, formatDate } from './format';
+import { formatHours, formatPause } from './TimeWheel';
 import { isoToday } from './alerts';
 import { staffing } from './cover';
 import RecordForm from './RecordForm';
@@ -25,6 +26,8 @@ function value(field, record, data, withContact = false) {
  if (field.key === 'amount') return <span className="num">{money(Number(raw))}</span>;
  if (field.type === 'date') return <span className="num">{formatDate(raw)}</span>;
  if (field.type === 'number') return <span className="num">{number(Number(raw))}</span>;
+ if (field.type === 'duration') return <span className="num">{formatHours(raw)}</span>;
+ if (field.type === 'pause') return <span className="num">{formatPause(raw)}</span>;
  return raw;
 }
 
@@ -143,7 +146,7 @@ function Contact({ person }) {
  return parts.length ? <span className="sub">{parts.join(' · ')}</span> : null;
 }
 
-const numeric = field => field.type === 'number' || field.type === 'date' || field.key === 'amount';
+const numeric = field => ['number', 'date', 'duration', 'pause'].includes(field.type) || field.key === 'amount';
 
 const RELATED_ROWS = 5;
 
