@@ -40,7 +40,7 @@ Personeel heeft naam, functie, contactgegevens en lokale bestandsbijlagen achter
 
 De huisstijl volgt [qunited.eu](https://qunited.eu): het donkerblauw (#122941), het limoengroen uit de Q (#afe100) en het warme crème (#ede8e4), gemeten op de site zelf. Het logo is nagetekend als vectorbestand (`src/Logo.jsx`), zodat het op elk scherm scherp blijft; de app-iconen zijn uit dezelfde Q gemaakt.
 
-Voor het dashboard staat een **inlogpagina** in de stijl van de site: donkerblauw, de crème balk met het logo en een gedimde luchtfoto van een offshoreplatform als achtergrond. Een wachtwoord of e-mailadres is nog niet nodig; wie op Inloggen klikt, blijft ingelogd tot hij op **Uitloggen** (onderaan het menu) klikt. Dit is een voorportaal, geen beveiliging: echte accounts komen pas met centrale opslag.
+Voor het dashboard staat een **inlogpagina** in de stijl van de site: een crème kaart met het logo, een begroeting die bij het tijdstip past en één knop, op een gedimde luchtfoto van een offshoreplatform. Een wachtwoord of e-mailadres is nog niet nodig; wie op Inloggen klikt, blijft ingelogd tot hij op **Uitloggen** (onderaan het menu) klikt. Dit is een voorportaal, geen beveiliging: echte accounts komen pas met centrale opslag.
 
 In het dashboard draagt het crème frame de zijbalk en de bovenbalk; het werk staat op een wit blad. Tekst en knoppen zijn donkerblauw, het limoengroen staat op de data (de bezettingsbalken en de grafieken) en als streepje bij het actieve menu-item. Koppen staan in Poppins, geometrisch zoals het woordmerk; al het andere in Inter, met vaste cijferbreedtes zodat bedragen, uren en datums onder elkaar uitlijnen. Beide lettertypen staan gesubset in deze repo (`src/fonts/`, OFL-licenties ernaast) en worden niet extern geladen.
 
