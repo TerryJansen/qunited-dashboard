@@ -48,7 +48,7 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
   if (onSave(clean)) setMessage('');
  }
 
- return <form onSubmit={submit} className="editor">
+ return <form onSubmit={submit} className="editor" noValidate>
   <h2>{draft.id ? 'Registratie bewerken' : 'Nieuwe registratie'}</h2>
   <p className="muted">Velden met * zijn verplicht.</p>
   <div className="form-grid">
@@ -71,6 +71,7 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
        </select>
        : <input aria-label={field.label} type={field.type} required={field.required} min={field.min} max={field.max} step={field.step} maxLength={1000}
         value={draft[field.key] ?? ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })} />}
+    {field.hint && <span className="field-hint">{field.hint}</span>}
    </label>)}
    <label>Status
     <select aria-label="Status" value={draft.status} onChange={event => setDraft({ ...draft, status: event.target.value })}>

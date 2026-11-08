@@ -19,7 +19,7 @@ test('saving something asks the browser to keep the data',async({page})=>{
  await page.goto('/#/projecten');
  expect(await page.evaluate(()=>window.__persistCalls)).toBe(0);
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
- await page.getByLabel('Projectnaam').fill('Bewaar mij');
+ await page.getByLabel('Projectnaam').fill('Bewaar mij');await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await expect(row(page,'Bewaar mij')).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>window.__persistCalls)).toBeGreaterThan(0);

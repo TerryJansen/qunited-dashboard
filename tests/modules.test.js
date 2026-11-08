@@ -7,6 +7,7 @@ for(const [route,title,label] of cases)test(`${title}: CRUD, search, filter, per
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
  await page.getByLabel(label,{exact:true}).fill('Test registratie');
  if(route==='facturatie'){await page.getByLabel('Relatie',{exact:true}).fill('Test klant');await page.getByLabel('Bedrag (€)').fill('123.45');}
+ if(route==='projecten')await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  if(route==='procedures')await page.getByLabel('Inhoud').fill('Eigen documenttekst.');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await expect(row(page,'Test registratie')).toBeVisible();

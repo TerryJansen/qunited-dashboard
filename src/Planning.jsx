@@ -3,7 +3,8 @@ import { isoToday, shiftDays } from './alerts';
 import { week, dayInfo } from './agenda';
 import { modules } from './modules';
 import useNarrow from './useNarrow';
-import { DurationWheel, PauseChoice, TravelChoice, formatHours, formatMinutes } from './TimeWheel';
+import { DurationWheel, PauseChoice, formatHours, formatMinutes } from './TimeWheel';
+import { drive, RouteError } from './route';
 
 const KIND = { actief: 'Ingezet', gepland: 'Gepland', afgerond: 'Afgerond', afwezig: 'Afwezig' };
 
@@ -18,14 +19,86 @@ export function statusFor(record, today) {
 const fridayOf = iso => shiftDays(iso, Math.max(0, 4 - (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7));
 const longDate = iso => { const d = dayInfo(iso, ''); return `${d.long} ${d.date}`; };
 
-/** Het venster om iemand in te plannen of een inzet te wijzigen. Zo weinig velden als het kan. */
+/** Reistijd: berekend van het vertrekpunt naar de projectlocatie, niet gekozen. */
+function Travel({ person, project, draft, set }) {
+ const [state, setState] = useState({ status: 'idle', text: '' });
+ const home = (person?.home || '').trim();
+ const fromKind = draft.travelFromKind || (home ? 'huis' : 'adres');
+ const fromAddress = fromKind === 'huis' ? home : (draft.travelFrom || '');
+ const target = (project?.location || '').trim();
+
+ useEffect(() => {
+  if (!project) { setState({ status: 'idle', text: '' }); return undefined; }
+  if (!target) { setState({ status: 'geen-locatie', text: '' }); return undefined; }
+  if (!fromAddress.trim()) {
+   // Geen vertrekpunt: dan ook geen oude reistijd laten staan.
+   if (draft.travel) set({ travel: '', travelOneWay: '', distanceKm: '' });
+   setState({ status: 'idle', text: '' });
+   return undefined;
+  }
+  if (draft.travelFrom === fromAddress && draft.travelTo === target && draft.travel) { setState({ status: 'klaar', text: '' }); return undefined; }
+  let stop = false;
+  setState({ status: 'bezig', text: '' });
+  const timer = setTimeout(() => {
+   drive(fromAddress, target).then(trip => {
+    if (stop) return;
+    set({ travelFromKind: fromKind, travelFrom: fromAddress, travelTo: target, travelOneWay: String(trip.minutes), travel: String(trip.minutes * 2), distanceKm: String(trip.km) });
+    setState({ status: 'klaar', text: '' });
+   }).catch(error => {
+    if (stop) return;
+    set({ travelFromKind: fromKind, travelFrom: fromAddress, travelTo: target, travelOneWay: '', travel: '', distanceKm: '' });
+    setState({ status: 'fout', text: error instanceof RouteError ? error.message : 'De reistijd kon niet worden berekend.' });
+   });
+  }, 600);
+  return () => { stop = true; clearTimeout(timer); };
+ }, [fromKind, fromAddress, target, project?.id]);
+
+ return <div className="plan-travel" role="group" aria-labelledby="travel-title">
+  <span className="field-label" id="travel-title">Reistijd</span>
+  {!project
+   ? <p className="plan-travel-note">Kies eerst een project.</p>
+   : <>
+    <div className="chips" role="radiogroup" aria-label="Vertrek vanaf">
+     <label className={`chip${fromKind === 'huis' ? ' is-on' : ''}${home ? '' : ' is-off'}`}>
+      <input type="radio" name="vertrek" checked={fromKind === 'huis'} disabled={!home} onChange={() => set({ travelFromKind: 'huis' })} />
+      {home ? `Huis · ${home}` : 'Huis (nog geen adres)'}
+     </label>
+     <label className={`chip${fromKind === 'adres' ? ' is-on' : ''}`}>
+      <input type="radio" name="vertrek" checked={fromKind === 'adres'} onChange={() => set({ travelFromKind: 'adres', travelFrom: draft.travelFromKind === 'adres' ? draft.travelFrom : '' })} />
+      Ander adres
+     </label>
+    </div>
+    {fromKind === 'adres' && <label className="plan-from">Vertrekadres
+     <input type="text" maxLength={200} placeholder="Straat en plaats, of postcode" value={draft.travelFromKind === 'adres' ? draft.travelFrom || '' : ''}
+      onChange={event => set({ travelFromKind: 'adres', travelFrom: event.target.value })} />
+    </label>}
+    {!home && person && fromKind === 'huis' && <p className="plan-travel-note">Vul bij {person.name} een vertrekadres in om vanaf huis te rekenen.</p>}
+    <p className="plan-route">
+     <span>{fromAddress || 'Vertrekpunt'}</span><span aria-hidden="true"> → </span><span>{target || 'locatie van het project'}</span>
+    </p>
+    <div className={`plan-travel-result is-${state.status}`} aria-live="polite" data-testid="travel-result">
+     {state.status === 'geen-locatie' && <>Dit project heeft nog geen locatie. <a href={`#/projecten/${project.id}`}>Locatie invullen</a></>}
+     {state.status === 'bezig' && 'Reistijd berekenen…'}
+     {state.status === 'fout' && state.text}
+     {state.status === 'klaar' && draft.travel && <>
+      <b>{formatMinutes(draft.travel)}</b> per dag heen en terug
+      <span>enkele reis {formatMinutes(draft.travelOneWay)} · {draft.distanceKm} km met de auto, zonder file</span>
+     </>}
+     {state.status === 'idle' && !fromAddress && 'Kies waar de medewerker vandaan rijdt.'}
+    </div>
+    {state.status === 'klaar' && <p className="plan-credit">Route: © OpenStreetMap-bijdragers</p>}
+   </>}
+ </div>;
+}
+
+/** Het venster om iemand in te plannen of een inzet te wijzigen: links wie en wanneer, rechts de werkdag. */
 function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
  const ref = useRef(null);
  const [draft, setDraft] = useState(plan.record);
  const [message, setMessage] = useState(null);
  const editing = !!plan.record.id;
  // Een melding is een korte pop-up: weg zodra je iets aanpast, en anders na een paar seconden.
- const set = (key, value) => { setMessage(null); setDraft(current => ({ ...current, [key]: value })); };
+ const set = (key, value) => { setMessage(null); setDraft(current => typeof key === 'object' ? { ...current, ...key } : { ...current, [key]: value }); };
  useEffect(() => {
   if (!message) return undefined;
   const timer = setTimeout(() => setMessage(null), 3500);
@@ -37,6 +110,7 @@ function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
   if (field) ref.current?.querySelector(field)?.focus();
  }
  const people = data.personeel.filter(person => person.status === 'Actief' || person.id === draft.employeeId);
+ const person = data.personeel.find(p => p.id === draft.employeeId);
  const project = data.projecten.find(p => p.id === draft.projectId);
 
  useEffect(() => {
@@ -59,59 +133,71 @@ function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
   if (onSave(clean)) onClose();
  }
 
+ const summary = draft.start ? [
+  `${longDate(draft.start)}${draft.end ? (draft.end !== draft.start ? ` t/m ${longDate(draft.end)}` : '') : ', zonder einddatum'}`,
+  Number(draft.hoursPerDay) > 0 ? `${formatHours(draft.hoursPerDay)} uur` : '',
+  Number(draft.pause) > 0 ? `${formatMinutes(draft.pause)} pauze` : '',
+  Number(draft.travel) > 0 ? `${formatMinutes(draft.travel)} reistijd` : '',
+ ].filter(Boolean).join(' · ') : '';
+
  return <dialog ref={ref} className="plan-dialog" aria-labelledby="plan-title" onCancel={event => { event.preventDefault(); onClose(); }}>
   <form onSubmit={submit} noValidate>
-   <h2 id="plan-title">{editing ? 'Inzet wijzigen' : 'Inzet plannen'}</h2>
+   <header className="plan-head">
+    <h2 id="plan-title">{editing ? 'Inzet wijzigen' : 'Inzet plannen'}</h2>
+    <button type="button" className="plan-close" onClick={onClose} aria-label="Sluiten">×</button>
+   </header>
    {!data.projecten.length
     ? <p className="plan-empty">Er is nog geen project om iemand op te zetten. <a href="#/projecten/nieuw">Maak eerst een project aan</a>.</p>
-    : <>
-     <label>Medewerker
-      <select name="employee" aria-label="Medewerker" value={draft.employeeId || ''} onChange={event => set('employeeId', event.target.value)}>
-       <option value="" disabled hidden>Kies medewerker</option>
-       {people.map(person => <option key={person.id} value={person.id}>{person.name}{person.role ? ` · ${person.role}` : ''}</option>)}
-      </select>
-     </label>
-     <label>Project
-      <select name="project" aria-label="Project" value={draft.projectId || ''} onChange={event => set('projectId', event.target.value)}>
-       <option value="" disabled hidden>Kies project</option>
-       {data.projecten.filter(p => !['Afgerond', 'Geannuleerd'].includes(p.status) || p.id === draft.projectId)
-        .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-      </select>
-     </label>
-     <div className="plan-dates">
-      <label>Van
-       <input type="date" value={draft.start || ''} onChange={event => set('start', event.target.value)} />
+    : <div className="plan-body">
+     <section className="plan-col" aria-label="Wie en wanneer">
+      <label>Medewerker
+       <select name="employee" aria-label="Medewerker" value={draft.employeeId || ''} onChange={event => set('employeeId', event.target.value)}>
+        <option value="" disabled hidden>Kies medewerker</option>
+        {people.map(p => <option key={p.id} value={p.id}>{p.name}{p.role ? ` · ${p.role}` : ''}</option>)}
+       </select>
       </label>
-      <label>Tot en met
-       <input type="date" value={draft.end || ''} min={draft.start || undefined} onChange={event => set('end', event.target.value)} />
+      <label>Project
+       <select name="project" aria-label="Project" value={draft.projectId || ''} onChange={event => set('projectId', event.target.value)}>
+        <option value="" disabled hidden>Kies project</option>
+        {data.projecten.filter(p => !['Afgerond', 'Geannuleerd'].includes(p.status) || p.id === draft.projectId)
+         .map(p => <option key={p.id} value={p.id}>{p.name}{p.location ? ` · ${p.location}` : ''}</option>)}
+       </select>
       </label>
-     </div>
-     {draft.start && <div className="plan-quick" role="group" aria-label="Snel kiezen tot wanneer">
-      <button type="button" onClick={() => set('end', draft.start)}>Alleen deze dag</button>
-      <button type="button" onClick={() => set('end', fridayOf(draft.start))}>T/m vrijdag</button>
-      <button type="button" onClick={() => set('end', shiftDays(draft.start, 13))}>2 weken</button>
-      <button type="button" onClick={() => set('end', '')}>Nog onbekend</button>
-     </div>}
-     <div className="plan-day">
-      <DurationWheel label="Uren per dag" value={draft.hoursPerDay ?? ''} onChange={value => set('hoursPerDay', value)} />
-      <div className="plan-day-extra">
-       <PauseChoice label="Pauze per dag" value={draft.pause ?? ''} onChange={value => set('pause', value)} />
-       <TravelChoice label="Reistijd per dag" value={draft.travel ?? ''} onChange={value => set('travel', value)} />
+      <div className="plan-dates">
+       <label>Van
+        <input type="date" value={draft.start || ''} onChange={event => set('start', event.target.value)} />
+       </label>
+       <label>Tot en met
+        <input type="date" value={draft.end || ''} min={draft.start || undefined} onChange={event => set('end', event.target.value)} />
+       </label>
       </div>
-     </div>
-     <label><span>Rol op project <span className="plan-optional">(mag leeg)</span></span>
-      <input type="text" maxLength={200} value={draft.role || ''} onChange={event => set('role', event.target.value)} />
-     </label>
-     <p className="plan-summary" aria-live="polite">
-      {draft.start ? <>Van {longDate(draft.start)} {draft.end ? <>tot en met {longDate(draft.end)}</> : 'zonder einddatum'}{Number(draft.hoursPerDay) > 0 ? <>, {formatHours(draft.hoursPerDay)} uur per dag</> : ''}{Number(draft.pause) > 0 ? <>, {formatMinutes(draft.pause)} pauze</> : ''}{Number(draft.travel) > 0 ? <>, {formatMinutes(draft.travel)} reistijd</> : ''}.</> : ''}
-     </p>
-    </>}
+      {draft.start && <div className="plan-quick" role="group" aria-label="Snel kiezen tot wanneer">
+       <button type="button" onClick={() => set('end', draft.start)}>Alleen deze dag</button>
+       <button type="button" onClick={() => set('end', fridayOf(draft.start))}>T/m vrijdag</button>
+       <button type="button" onClick={() => set('end', shiftDays(draft.start, 13))}>2 weken</button>
+       <button type="button" onClick={() => set('end', '')}>Nog onbekend</button>
+      </div>}
+      <label><span>Rol op project <span className="plan-optional">(mag leeg)</span></span>
+       <input type="text" maxLength={200} value={draft.role || ''} onChange={event => set('role', event.target.value)} />
+      </label>
+     </section>
+     <section className="plan-col plan-workday" aria-label="Werkdag">
+      <div className="plan-day">
+       <DurationWheel label="Uren per dag" rows={3} value={draft.hoursPerDay ?? ''} onChange={value => set('hoursPerDay', value)} />
+       <PauseChoice label="Pauze per dag" value={draft.pause ?? ''} onChange={value => set('pause', value)} />
+      </div>
+      <Travel person={person} project={project} draft={draft} set={set} />
+     </section>
+    </div>}
    {message && <p key={message.id} role="alert" className="plan-toast">{message.text}</p>}
-   <div className="actions">
-    {!!data.projecten.length && <button className="primary" type="submit">Opslaan</button>}
-    <button type="button" onClick={onClose}>Annuleren</button>
-    {editing && <button type="button" className="danger plan-delete" onClick={() => { if (onDelete(draft)) onClose(); }}>Verwijderen</button>}
-   </div>
+   <footer className="plan-foot">
+    <p className="plan-summary" aria-live="polite">{summary}</p>
+    <div className="actions">
+     {editing && <button type="button" className="danger" onClick={() => { if (onDelete(draft)) onClose(); }}>Verwijderen</button>}
+     <button type="button" onClick={onClose}>Annuleren</button>
+     {!!data.projecten.length && <button className="primary" type="submit">Opslaan</button>}
+    </div>
+   </footer>
    {editing && project && <p className="plan-link"><a href={`#/projecten/${project.id}`}>Project {project.name} openen</a></p>}
   </form>
  </dialog>;
@@ -146,9 +232,9 @@ export default function Planning({ data, save }) {
  const [picked, setPicked] = useState(view.todayIndex ?? 0);
  const day = Math.min(picked, 6);
 
- const addFor = (employeeId, iso) => setPlan({ record: { employeeId: employeeId || '', projectId: '', start: iso, end: iso, role: '', hoursPerDay: '8', pause: '30', travel: '0' } });
+ const addFor = (employeeId, iso) => setPlan({ record: { employeeId: employeeId || '', projectId: '', start: iso, end: iso, role: '', hoursPerDay: '8', pause: '30' } });
  // Een inzet van vóór de uren per dag begint op 8:00; je ziet het in het wiel en past het aan.
- const edit = id => { const record = data.inzet.find(item => item.id === id); if (record) setPlan({ record: { hoursPerDay: '8', pause: '30', travel: '0', ...record } }); };
+ const edit = id => { const record = data.inzet.find(item => item.id === id); if (record) setPlan({ record: { hoursPerDay: '8', pause: '30', ...record } }); };
  function store(record) {
   const exists = data.inzet.some(item => item.id === record.id);
   const next = exists ? data.inzet.map(item => item.id === record.id ? record : item) : [...data.inzet, { ...record, id: crypto.randomUUID() }];

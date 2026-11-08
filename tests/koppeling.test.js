@@ -8,7 +8,7 @@ test('a person added once is pickable everywhere, with function and phone carrie
  await seed(page,{...emptyData(),personeel:staf});
  // bij een project kies je de verantwoordelijke uit de lijst, je typt hem niet
  await page.goto('/#/projecten/nieuw');
- await page.getByLabel('Projectnaam').fill('IHC defense');
+ await page.getByLabel('Projectnaam').fill('IHC defense');await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  await page.getByLabel('Verantwoordelijke').selectOption({label:'Terry Jansen'});
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  // in de lijst staat alleen de naam; de contactgegevens staan op de projectpagina
@@ -70,7 +70,7 @@ test('an optional person field does not demand staff before you can start',async
  await page.goto('/#/projecten');
  await expect(page.getByText('Voeg eerst medewerkers toe.')).toHaveCount(0);
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
- await page.getByLabel('Projectnaam').fill('Zonder personeel');
+ await page.getByLabel('Projectnaam').fill('Zonder personeel');await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await expect(row(page,'Zonder personeel')).toBeVisible();
 });

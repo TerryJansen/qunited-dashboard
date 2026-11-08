@@ -33,25 +33,23 @@ test('click a free day in the planning to put someone on a project',async({page}
  await expect.poll(()=>hours.evaluate(el=>Math.round(el.scrollTop/44))).toBe(8);
  await hours.focus();await hours.press('ArrowDown');await hours.press('ArrowDown');
  await minutes.focus();for(let i=0;i<3;i++)await minutes.press('PageUp');
- await expect(dialog.locator('.plan-summary')).toContainText('6:30 uur per dag');
- // pauze en reistijd: pauze begint op 30 min, reistijd op geen
- const pause=dialog.getByRole('group',{name:/Pauze per dag/}), travel=dialog.getByRole('group',{name:/Reistijd per dag/});
+ await expect(dialog.locator('.plan-summary')).toContainText('6:30 uur');
+ // pauze: begint op 30 min
+ const pause=dialog.getByRole('group',{name:/Pauze per dag/});
  await expect(pause.getByRole('radio',{name:'30 min'})).toBeChecked();
- await expect(travel.getByRole('radio',{name:'Geen'})).toBeChecked();
  await pause.getByText('45 min',{exact:true}).click();
- await travel.getByText('1 uur 30 min',{exact:true}).click();
- await expect(dialog.locator('.plan-summary')).toContainText('45 min pauze, 1 uur 30 min reistijd');
+ await expect(dialog.locator('.plan-summary')).toContainText('6:30 uur · 45 min pauze');
  await dialog.getByRole('button',{name:'Opslaan'}).click();
  await expect(dialog).toHaveCount(0);
  const ada=page.getByRole('row').filter({hasText:'Ada'});
  const block=ada.getByRole('button',{name:/Project A/});
  await expect(block).toContainText('Gepland');
- await expect(block).toContainText('Inspecteur · 6:30 uur per dag · 45 min pauze · 1 uur 30 min reistijd');
+ await expect(block).toContainText('Inspecteur · 6:30 uur per dag · 45 min pauze');
  expect(await ada.locator('td').first().getAttribute('colspan')).toBe('5');
  await page.reload();
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet);
  expect(stored).toHaveLength(1);
- expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A',hoursPerDay:'6.5',pause:'45',travel:'90'});
+ expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A',hoursPerDay:'6.5',pause:'45'});
  expect(stored[0]).not.toHaveProperty('hoursPerWeek');
 });
 
@@ -99,6 +97,7 @@ test('the title follows a renamed project instead of going stale',async({page})=
  await page.goto('/#/projecten');
  await row(page,'Project A').getByRole('button',{name:'Bewerken',exact:true}).click();
  await page.getByLabel('Projectnaam').fill('Project A2');
+ await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await page.goto('/#/inzet');
  await expect(row(page,'Ada — Project A2')).toBeVisible();
@@ -117,4 +116,62 @@ test('today\'s list separate busy from available staff',async({page})=>{
  // het filter op het kerncijfer laat alleen wie niet ingezet is staan
  await page.getByRole('button',{name:/Beschikbaar vandaag/}).click();
  await expect(today.locator('li')).toHaveCount(1);
+});
+
+test('travel time is worked out from home to the project location, not picked',async({page})=>{
+ const asked=[];
+ await page.route('https://nominatim.openstreetmap.org/**',route=>{const q=new URL(route.request().url()).searchParams.get('q');asked.push(q);return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{lat:q.includes('Kinderdijk')?'51.88':'51.92',lon:'4.6',display_name:q}])})});
+ await page.route('https://router.project-osrm.org/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({routes:[{duration:1500,distance:21400}]})}));
+ await seed(page,{...base,
+  personeel:[{id:'e1',name:'Ada',status:'Actief',home:'3011 AB Rotterdam'},{id:'e2',name:'Bram',status:'Actief'}],
+  projecten:[{id:'p1',name:'IHC',location:'Kinderdijk',status:'In uitvoering'},{id:'p2',name:'Zonder plek',status:'Planning'}]});
+ await page.goto('/#/planning');
+ await page.getByRole('button',{name:'Volgende week'}).click();
+ await page.getByRole('button',{name:/^Ada inplannen op maandag/}).click();
+ const dialog=page.getByRole('dialog',{name:'Inzet plannen'});
+ // reistijd is geen keuze meer
+ await expect(dialog.getByRole('group',{name:/Reistijd per dag/})).toHaveCount(0);
+ await dialog.getByLabel('Project',{exact:true}).selectOption('p1');
+ await expect(dialog.getByRole('radio',{name:'Huis · 3011 AB Rotterdam'})).toBeChecked();
+ await expect(dialog.getByText('3011 AB Rotterdam → Kinderdijk')).toBeVisible();
+ const result=dialog.getByTestId('travel-result');
+ await expect(result).toContainText('50 min');
+ await expect(result).toContainText('enkele reis 25 min · 21 km');
+ expect(asked).toEqual(['3011 AB Rotterdam','Kinderdijk']);
+ // een ander vertrekadres rekent opnieuw
+ await dialog.getByText('Ander adres',{exact:true}).click();
+ await expect(result).not.toContainText('50 min');
+ await dialog.getByLabel('Vertrekadres').fill('Dordrecht');
+ await expect(result).toContainText('50 min');
+ await dialog.getByRole('button',{name:'Opslaan'}).click();
+ await expect(dialog).toHaveCount(0);
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet[0]);
+ expect(stored).toMatchObject({travelFromKind:'adres',travelFrom:'Dordrecht',travelTo:'Kinderdijk',travelOneWay:'25',travel:'50',distanceKm:'21'});
+ await expect(page.getByRole('row').filter({hasText:'Ada'})).toContainText('50 min reistijd');
+ // een project zonder locatie zegt dat eerlijk, en Bram zonder adres ook
+ await page.getByRole('button',{name:/^Bram inplannen op maandag/}).click();
+ const second=page.getByRole('dialog',{name:'Inzet plannen'});
+ await second.getByLabel('Project',{exact:true}).selectOption('p2');
+ await expect(second.getByTestId('travel-result')).toContainText('nog geen locatie');
+ await second.getByLabel('Project',{exact:true}).selectOption('p1');
+ await expect(second.getByRole('radio',{name:/Huis \(nog geen adres\)/})).toBeDisabled();
+});
+
+test('a place the map does not know gives a plain message, not a made-up time',async({page})=>{
+ await page.route('https://nominatim.openstreetmap.org/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
+ await seed(page,{...base,personeel:[{id:'e1',name:'Ada',status:'Actief',home:'Nergenshuizen'}],projecten:[{id:'p1',name:'IHC',location:'Kinderdijk',status:'In uitvoering'}]});
+ await page.goto('/#/planning');
+ await page.getByRole('button',{name:'Iemand inplannen'}).click();
+ const dialog=page.getByRole('dialog',{name:'Inzet plannen'});
+ await dialog.getByLabel('Medewerker',{exact:true}).selectOption('e1');
+ await dialog.getByLabel('Project',{exact:true}).selectOption('p1');
+ await expect(dialog.getByTestId('travel-result')).toContainText('staat niet op de kaart');
+});
+
+test('a project needs a location before it can be saved',async({page})=>{
+ await page.goto('/#/projecten/nieuw');
+ await page.getByLabel('Projectnaam').fill('Zonder locatie');
+ await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('verplichte velden');
+ await expect(page.getByText(/heliport/)).toBeVisible();
 });

@@ -23,7 +23,7 @@ export function splitHours(value) {
  return { h, m: h === 24 ? 0 : total % 60 };
 }
 export const joinHours = (h, m) => String(h === 24 ? 24 : Math.round((h + m / 60) * 1e6) / 1e6);
-function Column({ label, values, index, onChange, format }) {
+function Column({ label, values, index, onChange, format, rows = VISIBLE }) {
  const ref = useRef(null);
  const timer = useRef(0);
  const ignore = useRef(false);
@@ -81,7 +81,7 @@ function Column({ label, values, index, onChange, format }) {
   <div ref={ref} className="wheel-list" onScroll={scrolled} onKeyDown={key} tabIndex={0}
    role="spinbutton" aria-label={label} aria-valuemin={values[0]} aria-valuemax={values[values.length - 1]}
    aria-valuenow={values[index]} aria-valuetext={format(values[index])}
-   style={{ height: ITEM * VISIBLE, paddingBlock: ITEM * Math.floor(VISIBLE / 2) }}>
+   style={{ height: ITEM * rows, paddingBlock: ITEM * Math.floor(rows / 2) }}>
    {values.map((value, i) => <div key={value} className={`wheel-item${i === index ? ' is-picked' : ''}`}
     style={{ height: ITEM }} onClick={() => onChange(i)} aria-hidden="true">{format(value)}</div>)}
   </div>
@@ -89,17 +89,17 @@ function Column({ label, values, index, onChange, format }) {
 }
 
 /** Gewerkte tijd van 0:00 tot 24:00, per minuut. */
-export function DurationWheel({ label, value, onChange, required }) {
+export function DurationWheel({ label, value, onChange, required, rows }) {
  const { h, m } = splitHours(value);
  const id = `wheel-${label.replace(/\W+/g, '')}`;
  return <div className="field-block" role="group" aria-labelledby={id}>
   <span className="field-label" id={id}>{label}{required && <span aria-hidden="true"> *</span>}</span>
   <div className="wheel">
    <div className="wheel-band" aria-hidden="true" />
-   <Column label="Uren" values={HOURS} index={h} format={pad}
+   <Column label="Uren" rows={rows} values={HOURS} index={h} format={pad}
     onChange={i => onChange(joinHours(HOURS[i], HOURS[i] === 24 ? 0 : m))} />
    <span className="wheel-colon" aria-hidden="true">:</span>
-   <Column label="Minuten" values={MINUTES} index={MINUTES.indexOf(m)} format={pad}
+   <Column label="Minuten" rows={rows} values={MINUTES} index={MINUTES.indexOf(m)} format={pad}
     onChange={i => onChange(joinHours(h, h === 24 ? 0 : MINUTES[i]))} />
   </div>
   <span className="wheel-readout" aria-live="polite">{h} uur{m ? ` en ${m} minuten` : ''}</span>

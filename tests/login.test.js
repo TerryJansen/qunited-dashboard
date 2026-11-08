@@ -25,7 +25,7 @@ test('logging out returns to the login page and keeps the data',async({page})=>{
  await page.getByRole('button',{name:'Inloggen'}).click();
  await page.getByRole('link',{name:'Projecten',exact:true}).click();
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
- await page.getByLabel('Projectnaam').fill('Blijft staan');
+ await page.getByLabel('Projectnaam').fill('Blijft staan');await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
  await page.getByRole('button',{name:'Uitloggen'}).click();
  await expect(page.getByRole('heading',{level:1,name:/^Goede(morgen|middag|navond|nacht)$/})).toBeVisible();

@@ -799,3 +799,66 @@ button.agenda-block:active:not(:disabled) { transform: none; }
 .minutes-own.is-on input { box-shadow: inset 0 0 0 2px var(--navy); color: var(--navy); font-weight: 600; }
 .field-block label.minutes-own, .plan-dialog label.minutes-own { display: flex; align-items: center; gap: 8px; grid-template-columns: none; font-weight: 400; font-size: 14px; }
 .field-block label.minutes-own input { margin: 0; }
+
+/* ---------- planvenster, rustiger: breed en laag, de pagina blijft erachter zichtbaar ---------- */
+.field-hint { display: block; font-size: var(--fs-small); color: var(--muted); font-weight: 400; line-height: 1.4; }
+.plan-dialog {
+ width: min(1040px, calc(100vw - 64px)); max-height: min(780px, calc(100svh - 48px));
+ padding: 0; border-radius: 18px; overflow: hidden;
+ box-shadow: 0 18px 50px rgba(10, 24, 40, 0.22);
+}
+.plan-dialog::backdrop { background: rgba(10, 24, 40, 0.26); }
+.plan-dialog form { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0; padding: 0; max-height: inherit; }
+.plan-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 28px 6px; }
+.plan-dialog h2 { font-size: 21px; font-weight: 600; }
+.plan-close { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px; font-size: 24px; line-height: 1; background: transparent; color: var(--muted); }
+.plan-close:hover:not(:disabled) { background: var(--raised); color: var(--text); }
+.plan-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 36px; padding: 14px 28px 22px; overflow: auto; }
+.plan-col { display: grid; gap: 16px; align-content: start; }
+.plan-dialog label { font-size: 14px; gap: 6px; }
+.plan-dialog select, .plan-dialog input { height: 42px; font-size: 15px; }
+.plan-quick { margin-top: -8px; gap: 6px; }
+.plan-quick button { height: 34px; font-size: 13px; padding: 0 12px; }
+.plan-dialog .chip { height: 36px; padding: 0 12px; font-size: 13.5px; }
+.plan-dialog .minutes-own input { height: 36px; width: 72px; }
+.plan-day { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; padding: 0; background: none; border-radius: 0; }
+.plan-day .wheel { background: var(--raised); }
+.plan-day .chip { background: var(--surface); }
+.plan-day .chip.is-on { background: var(--navy); }
+.plan-day .wheel-item { font-size: 17px; }
+.plan-day .wheel-item.is-picked { font-size: 22px; }
+.plan-day .wheel-colon { font-size: 22px; }
+.plan-day .wheel-column { width: 54px; }
+.plan-travel { display: grid; gap: 10px; padding: 16px; border-radius: 14px; background: var(--raised); }
+.plan-travel .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-travel .chip { background: var(--surface); }
+.plan-travel .chip.is-on { background: var(--navy); }
+.plan-travel .chip.is-off { color: var(--muted); cursor: not-allowed; }
+.plan-from input { background: var(--surface); }
+.plan-route { margin: 0; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.plan-route span:first-child, .plan-route span:last-child { color: var(--text); font-weight: 500; }
+.plan-travel-result { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface); font-size: 14px; color: var(--muted); }
+.plan-travel-result b { font-family: var(--font-head); font-weight: 600; font-size: 22px; color: var(--navy); }
+.plan-travel-result.is-klaar { color: var(--text); }
+.plan-travel-result.is-fout, .plan-travel-result.is-geen-locatie { color: var(--pill-warning-ink); background: var(--pill-warning-bg); }
+.plan-travel-result span { font-size: 13px; color: var(--muted); }
+.plan-travel-note { margin: 0; font-size: 13px; color: var(--muted); }
+.plan-credit { margin: -4px 0 0; font-size: 11px; color: var(--faint); }
+.plan-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 28px; border-top: 1px solid var(--rule); background: var(--surface); }
+.plan-foot .plan-summary { margin: 0; font-size: 14px; color: var(--muted); }
+.plan-foot .actions { display: flex; gap: 8px; margin: 0; flex: none; }
+.plan-dialog .plan-foot .actions button, .plan-dialog .plan-foot .actions .primary { height: 42px; font-size: 15px; min-width: 0; }
+.plan-dialog .plan-foot .actions .primary { padding: 0 28px; }
+.plan-link { margin: 0; padding: 0 28px 16px; font-size: 13px; }
+.plan-toast { bottom: 84px; }
+@media (max-width: 860px) {
+ .plan-dialog { width: 100vw; max-width: 100vw; max-height: 94svh; margin: auto 0 0; border-radius: 18px 18px 0 0; }
+ .plan-head { padding: 18px 16px 4px; }
+ .plan-body { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 10px 16px 18px; }
+ .plan-day { grid-template-columns: minmax(0, 1fr); }
+ .plan-foot { flex-direction: column; align-items: stretch; padding: 12px 16px; }
+ .plan-foot .actions { flex-wrap: wrap; }
+ .plan-dialog .plan-foot .actions .primary { flex: 1 1 100%; order: -1; height: 48px; }
+ .plan-dialog .plan-foot .actions button { flex: 1; }
+ .plan-link { padding: 0 16px 14px; }
+}
