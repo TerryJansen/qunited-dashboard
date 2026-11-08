@@ -83,8 +83,8 @@ export default function Reports({ data }) {
 
  function downloadAssignments() {
   downloadCsv('qunited-inzet.csv', [
-   ['Medewerker', 'Project', 'Rol', 'Van', 'Tot en met', 'Uren per dag', 'Status'],
-   ...data.inzet.map(r => [reference(data.personeel, r.employeeId), reference(data.projecten, r.projectId), r.role || '', r.start || '', r.end || '', r.hoursPerDay ? String(r.hoursPerDay).replace('.', ',') : '', r.status]),
+   ['Medewerker', 'Project', 'Rol', 'Van', 'Tot en met', 'Uren per dag', 'Pauze (min)', 'Reistijd (min)', 'Status'],
+   ...data.inzet.map(r => [reference(data.personeel, r.employeeId), reference(data.projecten, r.projectId), r.role || '', r.start || '', r.end || '', r.hoursPerDay ? String(r.hoursPerDay).replace('.', ',') : '', r.pause ?? '', r.travel ?? '', r.status]),
   ]);
  }
 

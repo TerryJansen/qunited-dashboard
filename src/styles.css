@@ -720,3 +720,38 @@ button.agenda-block:active:not(:disabled) { transform: none; }
  .plan-delete { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .agenda-plus { transition: none; } }
+.plan-day { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: start; }
+.plan-day-extra { display: grid; gap: 16px; }
+.plan-dialog .chip { min-width: 0; height: 40px; padding: 0 12px; font-size: 14px; }
+.plan-dialog .pause-choice .chips { gap: 6px; }
+@media (max-width: 860px) { .plan-day { grid-template-columns: minmax(0, 1fr); } .plan-dialog .chip { flex: 0 1 auto; height: 44px; } }
+/* Een korte melding die even opkomt en weer verdwijnt, vlak boven de knoppen. */
+.plan-toast {
+ position: sticky; bottom: 76px; z-index: 2; justify-self: center; margin: 0;
+ padding: 12px 18px; border-radius: 999px; background: var(--navy); color: #ffffff;
+ font-weight: 500; font-size: 15px; box-shadow: 0 10px 24px rgba(10, 24, 40, 0.25);
+ animation: toast-in 220ms cubic-bezier(.2, .7, .2, 1) both, toast-out 300ms 3200ms ease both;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .plan-toast { animation: none; } }
+
+/* urenstaten: tijd en pauze in één strook */
+.form-time {
+ display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: start;
+ margin-top: 20px; padding: 20px; border-radius: 12px; background: var(--raised);
+}
+.form-time .wheel { background: var(--surface); }
+.form-time-choices { display: grid; gap: 20px; align-content: start; padding-top: 2px; }
+.form-time .chip { background: var(--surface); }
+.form-time .chip.is-on { background: var(--navy); }
+@media (max-width: 860px) {
+ .form-time { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 16px; }
+}
+.form-time-summary { margin: 4px 0 0; font-family: var(--font-head); font-weight: 500; font-size: 20px; color: var(--navy); }
+.form-time-summary:empty { display: none; }
+.plan-dialog { width: min(680px, calc(100vw - 32px)); }
+.plan-day { padding: 16px; border-radius: 12px; background: var(--raised); }
+.plan-day .wheel, .plan-day .chip { background: var(--surface); }
+.plan-day .chip.is-on { background: var(--navy); }
+@media (max-width: 860px) { .plan-dialog { width: 100vw; } }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { formatHours, formatPause } from './format';
+import { formatHours, formatPause, formatMinutes } from './format';
 
-export { formatHours, formatPause };
+export { formatHours, formatPause, formatMinutes };
 
 // Een draaiwiel zoals op een telefoon: veeg of scroll naar de juiste waarde, of tik erop.
 // Met het toetsenbord werkt het als een gewone draaiknop (pijltjes, Home, End).
@@ -11,6 +11,7 @@ const VISIBLE = 5;    // regels in beeld; de middelste is gekozen
 export const HOURS = Array.from({ length: 25 }, (_, h) => h);   // 0 tot en met 24
 export const MINUTES = [0, 15, 30, 45];
 export const PAUSES = [0, 15, 30, 45, 60];
+export const TRAVEL = [0, 15, 30, 45, 60, 90, 120, 180];
 
 const pad = n => String(n).padStart(2, '0');
 const still = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -105,15 +106,18 @@ export function DurationWheel({ label, value, onChange, required }) {
 }
 
 /** Pauze: altijd zichtbaar, één tik. */
-export function PauseChoice({ label, value, onChange, required }) {
+export function PauseChoice({ label, value, onChange, required, options = PAUSES, name = 'pauze', hint }) {
  return <fieldset className="field-block pause-choice">
-  <legend className="field-label">{label}{required && <span aria-hidden="true"> *</span>}</legend>
+  <legend className="field-label">{label}{required && <span aria-hidden="true"> *</span>}{hint && <span className="plan-optional"> {hint}</span>}</legend>
   <div className="chips">
-   {PAUSES.map(minutes => <label key={minutes} className={`chip${String(value) === String(minutes) ? ' is-on' : ''}`}>
-    <input type="radio" name="pauze" value={minutes} checked={String(value) === String(minutes)}
+   {options.map(minutes => <label key={minutes} className={`chip${String(value) === String(minutes) ? ' is-on' : ''}`}>
+    <input type="radio" name={name} value={minutes} checked={String(value) === String(minutes)}
      onChange={() => onChange(String(minutes))} />
-    {formatPause(minutes)}
+    {formatMinutes(minutes)}
    </label>)}
   </div>
  </fieldset>;
 }
+
+/** Reistijd per dag, heen en terug samen: ook één tik. */
+export const TravelChoice = props => <PauseChoice options={TRAVEL} name="reistijd" hint="(heen en terug)" {...props} />;

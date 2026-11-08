@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { modules, looksLikeId } from './modules';
-import { DurationWheel, PauseChoice } from './TimeWheel';
+import { DurationWheel, PauseChoice, formatHours, formatPause } from './TimeWheel';
 
 /** Dezelfde validatie voor elke module, zodat een lijst en een detailpagina niet uit elkaar lopen. */
 export function problemWith(id, record, data) {
@@ -30,10 +30,14 @@ export function problemWith(id, record, data) {
  return m.validate ? m.validate(record, data) : '';
 }
 
+const TIME_TYPES = ['duration', 'pause'];
+
 /** Het invoerscherm van één registratie. Geeft de schone registratie terug aan `onSave`. */
 export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel }) {
  const m = modules[id];
  const [message, setMessage] = useState('');
+ // Pas je iets aan, dan is de oude melding niet meer van toepassing.
+ useEffect(() => { setMessage(''); }, [draft]);
 
  function submit(event) {
   event.preventDefault();
@@ -48,11 +52,7 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
   <h2>{draft.id ? 'Registratie bewerken' : 'Nieuwe registratie'}</h2>
   <p className="muted">Velden met * zijn verplicht.</p>
   <div className="form-grid">
-   {m.fields.map(field => field.type === 'duration'
-    ? <DurationWheel key={field.key} label={field.label} required={field.required} value={draft[field.key] ?? ''} onChange={value => setDraft({ ...draft, [field.key]: value })} />
-    : field.type === 'pause'
-    ? <PauseChoice key={field.key} label={field.label} required={field.required} value={draft[field.key] ?? ''} onChange={value => setDraft({ ...draft, [field.key]: value })} />
-    : <label key={field.key}>
+   {m.fields.filter(field => !TIME_TYPES.includes(field.type)).map(field => <label key={field.key}>
     {field.label}{field.required && <span aria-hidden="true"> *</span>}
     {field.type === 'reference'
      ? <select aria-label={field.label} required={field.required} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })}>
@@ -78,6 +78,17 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
     </select>
    </label>
   </div>
+  {/* Tijd en pauze samen in één rustige strook onder de gewone velden, in plaats van verspreid over het raster. */}
+  {m.fields.some(field => TIME_TYPES.includes(field.type)) && <div className="form-time">
+   {m.fields.filter(field => field.type === 'duration').map(field =>
+    <DurationWheel key={field.key} label={field.label} required={field.required} value={draft[field.key] ?? ''} onChange={value => setDraft({ ...draft, [field.key]: value })} />)}
+   <div className="form-time-choices">
+    {m.fields.filter(field => field.type === 'pause').map(field =>
+     <PauseChoice key={field.key} name={field.key} options={field.options} label={field.label} required={field.required} value={draft[field.key] ?? ''} onChange={value => setDraft({ ...draft, [field.key]: value })} />)}
+    <p className="form-time-summary" aria-live="polite">{m.fields.filter(field => TIME_TYPES.includes(field.type) && draft[field.key] !== undefined && draft[field.key] !== '')
+     .map(field => field.type === 'duration' ? `${formatHours(draft[field.key])} uur` : `${formatPause(draft[field.key]).toLowerCase()} ${field.label.toLowerCase()}`).join(', ')}</p>
+   </div>
+  </div>}
   {message && <p role="alert" className="error">{message}</p>}
   <div className="actions">
    <button className="primary" type="submit">Opslaan</button>

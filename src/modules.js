@@ -17,7 +17,7 @@ export const modules = {
   derivedName:(record,data)=>`${named(data.personeel,record.employeeId)} — ${named(data.projecten,record.projectId)}`,
   titleFields:['employeeId','projectId'],
   period:{start:'start',end:'end'},
-  fields:[f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('projectId','Project','reference',true,{source:'projecten'}),f('role','Rol op project'),f('start','Van','date',true),f('end','Tot en met','date'),f('hoursPerDay','Uren per dag','duration',false,{min:0.01,max:24}),f('notes','Notities','textarea')]
+  fields:[f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('projectId','Project','reference',true,{source:'projecten'}),f('role','Rol op project'),f('start','Van','date',true),f('end','Tot en met','date'),f('hoursPerDay','Uren per dag','duration',false,{min:0.01,max:24}),f('pause','Pauze per dag','pause'),f('travel','Reistijd per dag','pause',false,{options:[0,15,30,45,60,90,120,180]}),f('notes','Notities','textarea')]
  },
  afwezigheid:{
   title:'Afwezigheid',plural:'afwezigheidsregistraties',singular:'afwezigheidsregistratie',identityLabel:'Medewerker en soort',subField:'notes',

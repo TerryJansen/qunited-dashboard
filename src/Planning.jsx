@@ -3,7 +3,7 @@ import { isoToday, shiftDays } from './alerts';
 import { week, dayInfo } from './agenda';
 import { modules } from './modules';
 import useNarrow from './useNarrow';
-import { DurationWheel, formatHours } from './TimeWheel';
+import { DurationWheel, PauseChoice, TravelChoice, formatHours, formatMinutes } from './TimeWheel';
 
 const KIND = { actief: 'Ingezet', gepland: 'Gepland', afgerond: 'Afgerond', afwezig: 'Afwezig' };
 
@@ -22,9 +22,20 @@ const longDate = iso => { const d = dayInfo(iso, ''); return `${d.long} ${d.date
 function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
  const ref = useRef(null);
  const [draft, setDraft] = useState(plan.record);
- const [message, setMessage] = useState('');
+ const [message, setMessage] = useState(null);
  const editing = !!plan.record.id;
- const set = (key, value) => setDraft(current => ({ ...current, [key]: value }));
+ // Een melding is een korte pop-up: weg zodra je iets aanpast, en anders na een paar seconden.
+ const set = (key, value) => { setMessage(null); setDraft(current => ({ ...current, [key]: value })); };
+ useEffect(() => {
+  if (!message) return undefined;
+  const timer = setTimeout(() => setMessage(null), 3500);
+  return () => clearTimeout(timer);
+ }, [message]);
+ // Zet de cursor in het veld dat nog ontbreekt, zodat je meteen ziet waar het om gaat.
+ function warn(text, field) {
+  setMessage({ text, id: Date.now() });
+  if (field) ref.current?.querySelector(field)?.focus();
+ }
  const people = data.personeel.filter(person => person.status === 'Actief' || person.id === draft.employeeId);
  const project = data.projecten.find(p => p.id === draft.projectId);
 
@@ -37,11 +48,11 @@ function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
 
  function submit(event) {
   event.preventDefault();
-  if (!draft.employeeId) { setMessage('Kies een medewerker.'); return; }
-  if (!draft.projectId) { setMessage('Kies een project.'); return; }
-  if (!draft.start) { setMessage('Vul in vanaf welke dag.'); return; }
-  if (draft.end && draft.end < draft.start) { setMessage('"Tot en met" mag niet vóór "Van" liggen.'); return; }
-  if (!(Number(draft.hoursPerDay) > 0)) { setMessage('Kies hoeveel uur per dag, meer dan 0:00.'); return; }
+  if (!draft.employeeId) { warn('Kies een medewerker.', 'select[name="employee"]'); return; }
+  if (!draft.projectId) { warn('Kies een project.', 'select[name="project"]'); return; }
+  if (!draft.start) { warn('Vul in vanaf welke dag.', 'input[type="date"]'); return; }
+  if (draft.end && draft.end < draft.start) { warn('"Tot en met" mag niet vóór "Van" liggen.'); return; }
+  if (!(Number(draft.hoursPerDay) > 0)) { warn('Kies hoeveel uur per dag, meer dan 0:00.'); return; }
   const clean = { ...draft, role: (draft.role || '').trim() };
   if (clean.status !== 'Geannuleerd') clean.status = statusFor(clean, today);
   clean.name = modules.inzet.derivedName(clean, data);
@@ -81,15 +92,21 @@ function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
       <button type="button" onClick={() => set('end', shiftDays(draft.start, 13))}>2 weken</button>
       <button type="button" onClick={() => set('end', '')}>Nog onbekend</button>
      </div>}
-     <DurationWheel label="Uren per dag" value={draft.hoursPerDay ?? ''} onChange={value => set('hoursPerDay', value)} />
+     <div className="plan-day">
+      <DurationWheel label="Uren per dag" value={draft.hoursPerDay ?? ''} onChange={value => set('hoursPerDay', value)} />
+      <div className="plan-day-extra">
+       <PauseChoice label="Pauze per dag" value={draft.pause ?? ''} onChange={value => set('pause', value)} />
+       <TravelChoice label="Reistijd per dag" value={draft.travel ?? ''} onChange={value => set('travel', value)} />
+      </div>
+     </div>
      <label><span>Rol op project <span className="plan-optional">(mag leeg)</span></span>
       <input type="text" maxLength={200} value={draft.role || ''} onChange={event => set('role', event.target.value)} />
      </label>
      <p className="plan-summary" aria-live="polite">
-      {draft.start ? <>Van {longDate(draft.start)} {draft.end ? <>tot en met {longDate(draft.end)}</> : 'zonder einddatum'}{Number(draft.hoursPerDay) > 0 ? <>, {formatHours(draft.hoursPerDay)} uur per dag</> : ''}.</> : ''}
+      {draft.start ? <>Van {longDate(draft.start)} {draft.end ? <>tot en met {longDate(draft.end)}</> : 'zonder einddatum'}{Number(draft.hoursPerDay) > 0 ? <>, {formatHours(draft.hoursPerDay)} uur per dag</> : ''}{Number(draft.pause) > 0 ? <>, {formatMinutes(draft.pause)} pauze</> : ''}{Number(draft.travel) > 0 ? <>, {formatMinutes(draft.travel)} reistijd</> : ''}.</> : ''}
      </p>
     </>}
-   {message && <p role="alert" className="error">{message}</p>}
+   {message && <p key={message.id} role="alert" className="plan-toast">{message.text}</p>}
    <div className="actions">
     {!!data.projecten.length && <button className="primary" type="submit">Opslaan</button>}
     <button type="button" onClick={onClose}>Annuleren</button>
@@ -129,9 +146,9 @@ export default function Planning({ data, save }) {
  const [picked, setPicked] = useState(view.todayIndex ?? 0);
  const day = Math.min(picked, 6);
 
- const addFor = (employeeId, iso) => setPlan({ record: { employeeId: employeeId || '', projectId: '', start: iso, end: iso, role: '', hoursPerDay: '8' } });
+ const addFor = (employeeId, iso) => setPlan({ record: { employeeId: employeeId || '', projectId: '', start: iso, end: iso, role: '', hoursPerDay: '8', pause: '30', travel: '0' } });
  // Een inzet van vóór de uren per dag begint op 8:00; je ziet het in het wiel en past het aan.
- const edit = id => { const record = data.inzet.find(item => item.id === id); if (record) setPlan({ record: { hoursPerDay: '8', ...record } }); };
+ const edit = id => { const record = data.inzet.find(item => item.id === id); if (record) setPlan({ record: { hoursPerDay: '8', pause: '30', travel: '0', ...record } }); };
  function store(record) {
   const exists = data.inzet.some(item => item.id === record.id);
   const next = exists ? data.inzet.map(item => item.id === record.id ? record : item) : [...data.inzet, { ...record, id: crypto.randomUUID() }];

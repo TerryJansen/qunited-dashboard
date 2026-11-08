@@ -22,11 +22,14 @@ export function formatHours(value) {
  const total = Math.round(Number(value) * 60);
  return `${Math.floor(total / 60)}:${pad2(total % 60)}`;
 }
-export function formatPause(value) {
+/** Minuten zoals je ze zegt: "Geen", "30 min", "1 uur", "1,5 uur". */
+export function formatMinutes(value) {
  const minutes = Number(value);
- if (value === '' || value === undefined || !Number.isFinite(minutes)) return value ?? '';
+ if (value === '' || value === undefined || value === null || !Number.isFinite(minutes)) return value ?? '';
  if (minutes === 0) return 'Geen';
- if (minutes === 60) return '1 uur';
- return `${minutes} min`;
+ if (minutes < 60) return `${minutes} min`;
+ const hours = minutes / 60;
+ return `${String(hours).replace('.', ',')} uur`;
 }
+export const formatPause = formatMinutes;
 

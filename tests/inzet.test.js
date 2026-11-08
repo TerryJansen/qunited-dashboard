@@ -21,6 +21,8 @@ test('click a free day in the planning to put someone on a project',async({page}
  await dialog.getByRole('button',{name:'Opslaan'}).click();
  await expect(dialog.getByRole('alert')).toContainText('Kies een project');
  await dialog.getByLabel('Project',{exact:true}).selectOption('p1');
+ // de melding is een korte pop-up: weg zodra het project gekozen is
+ await expect(dialog.getByRole('alert')).toHaveCount(0);
  await dialog.getByRole('button',{name:'T/m vrijdag'}).click();
  await expect(dialog.getByLabel('Tot en met')).toHaveValue(plus(monday(),11));
  await dialog.getByLabel(/Rol op project/).fill('Inspecteur');
@@ -32,17 +34,24 @@ test('click a free day in the planning to put someone on a project',async({page}
  await hours.focus();await hours.press('ArrowDown');await hours.press('ArrowDown');
  await minutes.focus();await minutes.press('ArrowUp');await minutes.press('ArrowUp');
  await expect(dialog.locator('.plan-summary')).toContainText('6:30 uur per dag');
+ // pauze en reistijd: pauze begint op 30 min, reistijd op geen
+ const pause=dialog.getByRole('group',{name:/Pauze per dag/}), travel=dialog.getByRole('group',{name:/Reistijd per dag/});
+ await expect(pause.getByRole('radio',{name:'30 min'})).toBeChecked();
+ await expect(travel.getByRole('radio',{name:'Geen'})).toBeChecked();
+ await pause.getByText('45 min',{exact:true}).click();
+ await travel.getByText('1,5 uur',{exact:true}).click();
+ await expect(dialog.locator('.plan-summary')).toContainText('45 min pauze, 1,5 uur reistijd');
  await dialog.getByRole('button',{name:'Opslaan'}).click();
  await expect(dialog).toHaveCount(0);
  const ada=page.getByRole('row').filter({hasText:'Ada'});
  const block=ada.getByRole('button',{name:/Project A/});
  await expect(block).toContainText('Gepland');
- await expect(block).toContainText('Inspecteur · 6:30 uur per dag');
+ await expect(block).toContainText('Inspecteur · 6:30 uur per dag · 45 min pauze · 1,5 uur reistijd');
  expect(await ada.locator('td').first().getAttribute('colspan')).toBe('5');
  await page.reload();
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet);
  expect(stored).toHaveLength(1);
- expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A',hoursPerDay:'6.5'});
+ expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A',hoursPerDay:'6.5',pause:'45',travel:'90'});
  expect(stored[0]).not.toHaveProperty('hoursPerWeek');
 });
 
@@ -54,6 +63,8 @@ test('a block opens the same window to change or remove it, and checks the dates
  await dialog.getByLabel('Tot en met').fill(plus(monday(),-3));
  await dialog.getByRole('button',{name:'Opslaan'}).click();
  await expect(dialog.getByRole('alert')).toContainText('niet vóór');
+ // en hij verdwijnt ook vanzelf
+ await expect(dialog.getByRole('alert')).toHaveCount(0,{timeout:6000});
  await dialog.getByLabel('Tot en met').fill(plus(monday(),4));
  await dialog.getByLabel('Project',{exact:true}).selectOption('p2');
  await dialog.getByRole('button',{name:'Opslaan'}).click();
