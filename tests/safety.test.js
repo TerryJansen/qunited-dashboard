@@ -22,7 +22,8 @@ test('mobile navigation, the folded menu, the overview and history',async({page}
  await expect(page.getByRole('button',{name:'Menu',exact:true})).toBeVisible();
  await openMenu(page);
  const nav=page.getByRole('navigation',{name:'Hoofdnavigatie'});
- for(const m of Object.values(modules))await expect(nav.getByRole('link',{name:m.title,exact:true})).toBeVisible();
+ for(const m of Object.values(modules).filter(m=>!m.hidden))await expect(nav.getByRole('link',{name:m.title,exact:true})).toBeVisible();
+ await expect(nav.getByRole('link',{name:'Planning',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await navigate(page,'Projecten');
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();await page.getByLabel('Projectnaam').fill('Eigen project');await page.getByRole('button',{name:'Opslaan',exact:true}).click();

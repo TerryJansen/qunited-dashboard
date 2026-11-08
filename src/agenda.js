@@ -59,10 +59,8 @@ export function week(data, today, offset = 0) {
   for (let index = 0; index < 7; index += 1) {
    const entries = entriesOn(person.bars, index);
    const last = segments.at(-1);
-   // Een vrije werkdag loopt niet door in het weekend: zaterdag en zondag zijn hun eigen blok.
-   const sameFreeKind = last && !entries.length && !last.entries.length && last.weekend === days[index].weekend;
+   // Een vrije dag blijft een eigen vak: daar klik je op om iemand in te plannen.
    if (last && entries.length && keyOf(last.entries) === keyOf(entries)) last.span += 1;
-   else if (sameFreeKind) last.span += 1;
    else segments.push({ start: index, span: 1, entries, weekend: days[index].weekend });
   }
   return { id: person.id, name: person.label, role: person.sub, href: person.href, segments, perDay: days.map((_, i) => entriesOn(person.bars, i)) };

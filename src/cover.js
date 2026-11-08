@@ -85,8 +85,9 @@ export function coverRows(data, window, iso = isoToday(), { onlyAvailable = fals
      to: item.end ? between(window.start, item.end) : window.days.length - 1,
      kind: KIND_OF[item.status],
      label: project?.name || 'Verwijderd project',
-     note: [item.role, item.hoursPerWeek ? `${item.hoursPerWeek} uur per week` : ''].filter(Boolean).join(' · '),
+     note: item.role || '',
      href: project ? `#/projecten/${project.id}` : `#/inzet/${item.id}`,
+     inzetId: item.id,
     };
    }),
    ...data.afwezigheid.filter(item => item.employeeId === person.id && item.status !== 'Vervallen').map(item => ({

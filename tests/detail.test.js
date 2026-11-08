@@ -14,6 +14,7 @@ test('a block in the planning opens the project with its details',async({page})=
  // de inzet begint morgen; staat morgen in een volgende week, blader dan door
  if(!await page.locator('.agenda-block').filter({hasText:'IHC defense'}).count())await page.getByRole('button',{name:'Volgende week'}).click();
  await page.locator('.agenda-block').filter({hasText:'IHC defense'}).first().click();
+ await page.getByRole('link',{name:'Project IHC defense openen'}).click();
  await expect(page.getByRole('heading',{name:'IHC defense',exact:true})).toBeVisible();
  // de gegevens die je op een projectpagina verwacht
  const gegevens=page.getByRole('region',{name:'Gegevens'}).or(page.locator('.detail-grid'));

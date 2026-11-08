@@ -3,7 +3,7 @@ import {modules} from '../src/modules.js';
 import {navigate,openMenu,statusTab} from './helpers.js';
 test('every module cancel/reset and all navigation links work on mobile',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');
- for(const m of Object.values(modules)){
+ for(const m of Object.values(modules).filter(m=>!m.hidden)){
   await navigate(page,m.title);
   await expect(page.getByRole('heading',{name:m.title,exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
@@ -26,9 +26,8 @@ test('every module cancel/reset and all navigation links work on mobile',async({
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await openMenu(page);await page.locator('.brand').click();
  await expect(page.getByRole('heading',{name:'Overzicht',exact:true})).toBeVisible();
- await page.getByRole('link',{name:'Inzet toevoegen',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Inzet',exact:true})).toBeVisible();
- await expect(page.locator('.editor')).toHaveCount(1);
+ await page.getByRole('link',{name:'Planning openen',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Planning',exact:true})).toBeVisible();
  await page.goto('/#/missing');await page.getByRole('link',{name:'Naar dashboard',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Overzicht',exact:true})).toBeVisible();
 });

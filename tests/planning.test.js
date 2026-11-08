@@ -28,10 +28,12 @@ test('the week numbers and ranges read like a Dutch diary',()=>{
 test('consecutive days merge into one block with the name in it',()=>{
  const view=week(data,iso(new Date()));
  const ada=view.rows.find(r=>r.name==='Ada');
- expect(ada.segments.map(s=>[s.span,s.entries.map(e=>e.label).join()])).toEqual([[5,'Platform K14'],[2,'']]);
+ expect(ada.segments.map(s=>[s.span,s.entries.map(e=>e.label).join()])).toEqual([[5,'Platform K14'],[1,''],[1,'']]);
  const bram=view.rows.find(r=>r.name==='Bram');
- expect(bram.segments[0]).toMatchObject({span:2,entries:[]});
- expect(bram.segments[1]).toMatchObject({span:5});
+ // vrije dagen blijven losse vakken, want daar klik je op om iemand in te plannen
+ expect(bram.segments[0]).toMatchObject({span:1,entries:[]});
+ expect(bram.segments[1]).toMatchObject({span:1,entries:[]});
+ expect(bram.segments[2]).toMatchObject({span:5});
  const cem=view.rows.find(r=>r.name==='Cem');
  expect(cem.segments[0].entries[0]).toMatchObject({kind:'afwezig',label:'Vakantie'});
 });
@@ -40,11 +42,12 @@ test('the planning page shows one readable week, sits next to Urenstaten and pag
  await seed(page,data);
  const links=await page.getByRole('navigation',{name:'Hoofdnavigatie'}).getByRole('link').allTextContents();
  expect(links.indexOf('Planning')).toBe(links.indexOf('Urenstaten')-1);
+ expect(links).not.toContain('Inzet');
  await navigate(page,'Planning');
  const table=page.getByRole('table',{name:/Planning week \d+/});
  await expect(table.getByRole('columnheader')).toHaveCount(8);
  const ada=table.getByRole('row').filter({hasText:'Ada'});
- await expect(ada.getByRole('link',{name:/Platform K14/})).toBeVisible();
+ await expect(ada.getByRole('button',{name:/Platform K14/})).toBeVisible();
  expect(await ada.locator('td').first().getAttribute('colspan')).toBe('5');
  await expect(table.getByRole('row').filter({hasText:'Cem'})).toContainText('Vakantie');
  await expect(table.getByRole('row').filter({hasText:'Bram'})).toContainText('Gepland');
@@ -54,7 +57,9 @@ test('the planning page shows one readable week, sits next to Urenstaten and pag
  await expect(table.getByRole('row').filter({hasText:'Ada'})).toContainText('Vrij');
  await page.getByRole('button',{name:'Deze week'}).click();
  await expect(page.locator('.agenda-when')).toHaveText(title);
- await ada.getByRole('link',{name:/Platform K14/}).click();
+ await ada.getByRole('button',{name:/Platform K14/}).click();
+ await expect(page.getByRole('dialog',{name:'Inzet wijzigen'})).toBeVisible();
+ await page.getByRole('link',{name:'Project Platform K14 openen'}).click();
  await expect(page.getByRole('heading',{name:'Platform K14',exact:true})).toBeVisible();
 });
 

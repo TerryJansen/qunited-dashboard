@@ -10,12 +10,14 @@ export const modules = {
  inzet:{
   title:'Inzet',identityLabel:'Medewerker en project',subField:'role',plural:'inzetregistraties',singular:'inzetregistratie',
   description:'Wie staat op welk project en in welke periode. Alleen je eigen registratie: er wordt niemand ingepland of op de hoogte gebracht.',
+  // Geen eigen menu-item: inzet plan je vanuit de Planning, door op een dag te klikken.
+  hidden:true,
   states:['Gepland','Actief','Afgerond','Geannuleerd'],
   // Geen eigen naamveld: de titel komt uit medewerker en project.
   derivedName:(record,data)=>`${named(data.personeel,record.employeeId)} — ${named(data.projecten,record.projectId)}`,
   titleFields:['employeeId','projectId'],
   period:{start:'start',end:'end'},
-  fields:[f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('projectId','Project','reference',true,{source:'projecten'}),f('role','Rol op project'),f('start','Van','date',true),f('end','Tot en met','date'),f('hoursPerWeek','Uren per week','number',false,{min:1,max:80,step:1}),f('notes','Notities','textarea')]
+  fields:[f('employeeId','Medewerker','reference',true,{source:'personeel'}),f('projectId','Project','reference',true,{source:'projecten'}),f('role','Rol op project'),f('start','Van','date',true),f('end','Tot en met','date'),f('notes','Notities','textarea')]
  },
  afwezigheid:{
   title:'Afwezigheid',plural:'afwezigheidsregistraties',singular:'afwezigheidsregistratie',identityLabel:'Medewerker en soort',subField:'notes',

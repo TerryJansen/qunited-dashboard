@@ -56,8 +56,10 @@ export default function RecordForm({ id, data, draft, setDraft, onSave, onCancel
     {field.label}{field.required && <span aria-hidden="true"> *</span>}
     {field.type === 'reference'
      ? <select aria-label={field.label} required={field.required} value={draft[field.key] || ''} onChange={event => setDraft({ ...draft, [field.key]: event.target.value })}>
-      <option value="">Kies {field.label.toLowerCase()}</option>
+      {/* De tekst "Kies …" staat in het gesloten veld, maar niet bovenaan de lijst die openklapt. */}
+      <option value="" disabled hidden>Kies {field.label.toLowerCase()}</option>
       {data[field.source].map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+      {!field.required && draft[field.key] && <option value="">Geen {field.label.toLowerCase()}</option>}
       {draft[field.key] && !looksLikeId(draft[field.key]) && !data[field.source].some(option => option.id === draft[field.key])
        && <option value={draft[field.key]}>{draft[field.key]} (eerder ingetypt)</option>}
      </select>

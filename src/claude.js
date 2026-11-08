@@ -24,7 +24,7 @@ export function clearKey() {
 
 /** Wat elk scherm doet, afgeleid uit dezelfde moduledefinities als de app zelf, zodat het klopt. */
 function appDescription() {
- const lines = Object.values(modules).map(m =>
+ const lines = Object.values(modules).filter(m => !m.hidden).map(m =>
   `- ${m.title}: ${m.description} Velden: ${m.fields.map(field => field.label + (field.required ? ' (verplicht)' : '')).join(', ')}. Statussen: ${m.states.join(', ')}.`);
  return lines.join('\n');
 }
@@ -43,10 +43,10 @@ Hoe je antwoordt:
 - Gaat een vraag over iets buiten het dashboard, help dan kort als je kunt, maar zeg erbij dat je vooral voor het dashboard bent.
 
 Hoe het dashboard werkt:
-- Links staat het menu (op de telefoon achter de knop "Menu"), in groepen: Overzicht (Dashboard, Rapportages), Werk (Projecten, Inzet, Urenstaten), Mensen (Personeel, Afwezigheid), Middelen (Materiaal, Inventaris), Administratie (Facturatie, IT & support, Procedures). Onderaan staan "Back-up" en "Hulp".
+- Links staat het menu (op de telefoon achter de knop "Menu"), in groepen: Overzicht (Dashboard, Rapportages), Werk (Projecten, Planning, Urenstaten), Mensen (Personeel, Afwezigheid), Middelen (Materiaal, Inventaris), Administratie (Facturatie, IT & support, Procedures). Onderaan staan "Back-up" en "Hulp".
 - Elk onderdeel is een lijst. Bovenaan staat de knop "Toevoegen". Daaronder tabbladen per status, een zoekveld en "Filters wissen". Per regel staan "Bewerken" en "Verwijderen". Klik op de naam om alles van die regel te zien.
 - Een medewerker voeg je één keer toe bij Personeel; daarna kies je hem overal uit een lijst. Cv's en certificaten voeg je toe bij Personeel via "Bestanden" (eerst de medewerker opslaan).
-- Inzet koppelt een medewerker aan een project met een periode.
+- Planning is de weekagenda. Klik op een vrije dag bij een medewerker om hem op een project te zetten (project, van, tot en met, rol). Klik op een blok om die inzet te wijzigen of te verwijderen. Bladeren met "Vorige week" en "Volgende week".
 - Het Dashboard toont wie waar ingezet is, wie beschikbaar is, actiepunten, lopende projecten en wie binnenkort vrijkomt.
 - Rapportages toont uren per week, per project en per medewerker, met CSV-downloads.
 - Back-up maakt één bestand van alle gegevens ("Back-up downloaden") en kan dat weer terugzetten. Gegevens staan alleen in deze browser op dit apparaat; een back-up op een USB-stick is verstandig.

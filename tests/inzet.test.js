@@ -3,27 +3,65 @@ import {emptyData} from '../src/modules.js';
 import {seed,row,navigate} from './helpers.js';
 const base={...emptyData(),projecten:[{id:'p1',name:'Project A',status:'In uitvoering'},{id:'p2',name:'Project B',status:'Planning'}],personeel:[{id:'e1',name:'Ada',status:'Actief'},{id:'e2',name:'Bram',status:'Actief'}]};
 
-test('Inzet titles itself from employee and project, and validates the period',async({page})=>{
+const iso=d=>d.toLocaleDateString('sv-SE');
+const monday=()=>{const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d};
+const plus=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return iso(x)};
+
+test('click a free day in the planning to put someone on a project',async({page})=>{
  await seed(page,base);
- await navigate(page,'Inzet');
- await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
- await page.getByLabel('Medewerker',{exact:true}).selectOption('e1');
- await page.getByLabel('Project',{exact:true}).selectOption('p1');
- await page.getByLabel('Van',{exact:true}).fill('2026-12-01');
- await page.getByLabel('Tot en met',{exact:true}).fill('2026-11-30');
- await page.getByRole('button',{name:'Opslaan',exact:true}).click();
- await expect(page.getByRole('alert')).toContainText('Einddatum');
- await page.getByLabel('Tot en met',{exact:true}).fill('2026-12-31');
- await page.getByLabel('Uren per week').fill('99');
- await page.getByRole('button',{name:'Opslaan',exact:true}).click();
- await expect(row(page,'Ada — Project A')).toHaveCount(0);
- await page.getByLabel('Uren per week').fill('32');
- await page.getByLabel('Rol op project').fill('Inspecteur');
- await page.getByRole('button',{name:'Opslaan',exact:true}).click();
- await expect(row(page,'Ada — Project A')).toBeVisible();
+ await navigate(page,'Planning');
+ await page.getByRole('button',{name:'Volgende week'}).click();
+ await page.getByRole('button',{name:/^Ada inplannen op maandag/}).click();
+ const dialog=page.getByRole('dialog',{name:'Inzet plannen'});
+ await expect(dialog).toBeVisible();
+ // de medewerker en de dag staan al goed; geen "uren per week" meer
+ await expect(dialog.getByLabel('Medewerker')).toHaveValue('e1');
+ await expect(dialog.getByLabel('Van')).toHaveValue(plus(monday(),7));
+ await expect(dialog.getByLabel('Uren per week')).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Opslaan'}).click();
+ await expect(dialog.getByRole('alert')).toContainText('Kies een project');
+ await dialog.getByLabel('Project',{exact:true}).selectOption('p1');
+ await dialog.getByRole('button',{name:'T/m vrijdag'}).click();
+ await expect(dialog.getByLabel('Tot en met')).toHaveValue(plus(monday(),11));
+ await dialog.getByLabel(/Rol op project/).fill('Inspecteur');
+ await dialog.getByRole('button',{name:'Opslaan'}).click();
+ await expect(dialog).toHaveCount(0);
+ const ada=page.getByRole('row').filter({hasText:'Ada'});
+ const block=ada.getByRole('button',{name:/Project A/});
+ await expect(block).toContainText('Gepland');
+ await expect(block).toContainText('Inspecteur');
+ expect(await ada.locator('td').first().getAttribute('colspan')).toBe('5');
  await page.reload();
- await expect(row(page,'Ada — Project A')).toContainText('Inspecteur');
- await expect(row(page,'Ada — Project A')).toContainText('32');
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet);
+ expect(stored).toHaveLength(1);
+ expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A'});
+ expect(stored[0]).not.toHaveProperty('hoursPerWeek');
+});
+
+test('a block opens the same window to change or remove it, and checks the dates',async({page})=>{
+ await seed(page,{...base,inzet:[{id:'i1',name:'Ada — Project A',status:'Actief',employeeId:'e1',projectId:'p1',start:plus(monday(),0),end:plus(monday(),4)}]});
+ await page.goto('/#/planning');
+ await page.getByRole('row').filter({hasText:'Ada'}).getByRole('button',{name:/Project A/}).click();
+ const dialog=page.getByRole('dialog',{name:'Inzet wijzigen'});
+ await dialog.getByLabel('Tot en met').fill(plus(monday(),-3));
+ await dialog.getByRole('button',{name:'Opslaan'}).click();
+ await expect(dialog.getByRole('alert')).toContainText('niet vóór');
+ await dialog.getByLabel('Tot en met').fill(plus(monday(),4));
+ await dialog.getByLabel('Project',{exact:true}).selectOption('p2');
+ await dialog.getByRole('button',{name:'Opslaan'}).click();
+ await expect(page.getByRole('row').filter({hasText:'Ada'})).toContainText('Project B');
+ await page.getByRole('row').filter({hasText:'Ada'}).getByRole('button',{name:/Project B/}).click();
+ page.once('dialog',d=>d.accept());
+ await page.getByRole('dialog',{name:'Inzet wijzigen'}).getByRole('button',{name:'Verwijderen'}).click();
+ await expect(page.getByRole('row').filter({hasText:'Ada'})).not.toContainText('Project B');
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet)).toHaveLength(0);
+});
+
+test('a person list opens on the people, not on a "Kies medewerker" line',async({page})=>{
+ await seed(page,base);
+ await page.goto('/#/urenstaten/nieuw');
+ const options=page.getByLabel('Medewerker',{exact:true}).locator('option:not([disabled])');
+ await expect(options).toHaveText(['Ada','Bram']);
 });
 
 test('an assignment blocks deletion of its project and employee',async({page})=>{

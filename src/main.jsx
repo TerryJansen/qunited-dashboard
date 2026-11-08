@@ -29,7 +29,7 @@ const MAX_COLUMNS = 4;
 // Elf bestemmingen op één hoop is geen structuur; hier staan ze naar het soort werk.
 const NAV_GROUPS = [
  ['Overzicht', ['dashboard', 'rapportages']],
- ['Werk', ['projecten', 'inzet', 'planning', 'urenstaten']],
+ ['Werk', ['projecten', 'planning', 'urenstaten']],
  ['Mensen', ['personeel', 'afwezigheid']],
  ['Middelen', ['materiaal', 'inventaris']],
  ['Administratie', ['facturatie', 'support', 'procedures']],
@@ -38,7 +38,7 @@ const labelOf = key => key === 'dashboard' ? 'Dashboard' : PAGES[key] || modules
 
 function navigation() {
  const placed = new Set(NAV_GROUPS.flatMap(([, keys]) => keys));
- const leftover = Object.keys(modules).filter(key => !placed.has(key));
+ const leftover = Object.keys(modules).filter(key => !placed.has(key) && !modules[key].hidden);
  return leftover.length ? [...NAV_GROUPS, ['Overig', leftover]] : NAV_GROUPS;
 }
 
@@ -121,7 +121,7 @@ function App() {
       : page === 'rapportages' ? <Reports data={data} />
        : page === 'backup' ? <Backup data={data} onRestore={write} readOnly={!!initial.error} />
        : page === 'hulp' ? <Assistant data={data} />
-       : page === 'planning' ? <Planning data={data} />
+       : page === 'planning' ? <Planning data={data} save={records => write({ ...data, inzet: records })} />
         : modules[page] && action && action !== 'nieuw'
          ? <Detail key={`${page}/${action}`} id={page} recordId={action} data={data} save={records => write({ ...data, [page]: records })} />
          : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}

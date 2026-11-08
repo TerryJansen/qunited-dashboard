@@ -58,7 +58,7 @@ export default function Dashboard({ data }) {
  const steps = [
   { done: !!data.personeel.length, label: 'Voeg een medewerker toe', href: '#/personeel/nieuw' },
   { done: !!data.projecten.length, label: 'Maak een project aan', href: '#/projecten/nieuw' },
-  { done: !!data.inzet.length, label: 'Plan de eerste inzet', href: '#/inzet/nieuw' },
+  { done: !!data.inzet.length, label: 'Plan de eerste inzet', href: '#/planning' },
  ];
 
  return <>
@@ -67,7 +67,7 @@ export default function Dashboard({ data }) {
     <h1>Overzicht</h1>
    </div>
    <div className="title-actions">
-    <a className="primary" href="#/inzet/nieuw">Inzet toevoegen</a>
+    <a className="primary" href="#/planning">Planning openen</a>
    </div>
   </div>
 
@@ -86,7 +86,7 @@ export default function Dashboard({ data }) {
 
   <section className="kpis" aria-label="Kerncijfers">
    <Kpi
-    label="Ingezet vandaag" testid="deployed-count" href="#/inzet?status=Actief"
+    label="Ingezet vandaag" testid="deployed-count" href="#/planning"
     value={<>{number(deployed.length)}<small>/ {number(active.length)}</small></>}
     note={rate === null ? 'nog geen actieve medewerkers' : `${rate}% bezetting`} />
    <Kpi
