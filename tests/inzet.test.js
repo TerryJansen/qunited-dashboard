@@ -24,17 +24,25 @@ test('click a free day in the planning to put someone on a project',async({page}
  await dialog.getByRole('button',{name:'T/m vrijdag'}).click();
  await expect(dialog.getByLabel('Tot en met')).toHaveValue(plus(monday(),11));
  await dialog.getByLabel(/Rol op project/).fill('Inspecteur');
+ // uren per dag: begint op 8:00, hier 6:30
+ const hours=dialog.getByRole('spinbutton',{name:'Uren'}), minutes=dialog.getByRole('spinbutton',{name:'Minuten'});
+ await expect(hours).toHaveAttribute('aria-valuenow','8');
+ // het wiel staat ook zichtbaar op 08, niet op 00
+ await expect.poll(()=>hours.evaluate(el=>Math.round(el.scrollTop/44))).toBe(8);
+ await hours.focus();await hours.press('ArrowDown');await hours.press('ArrowDown');
+ await minutes.focus();await minutes.press('ArrowUp');await minutes.press('ArrowUp');
+ await expect(dialog.locator('.plan-summary')).toContainText('6:30 uur per dag');
  await dialog.getByRole('button',{name:'Opslaan'}).click();
  await expect(dialog).toHaveCount(0);
  const ada=page.getByRole('row').filter({hasText:'Ada'});
  const block=ada.getByRole('button',{name:/Project A/});
  await expect(block).toContainText('Gepland');
- await expect(block).toContainText('Inspecteur');
+ await expect(block).toContainText('Inspecteur · 6:30 uur per dag');
  expect(await ada.locator('td').first().getAttribute('colspan')).toBe('5');
  await page.reload();
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet);
  expect(stored).toHaveLength(1);
- expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A'});
+ expect(stored[0]).toMatchObject({employeeId:'e1',projectId:'p1',role:'Inspecteur',status:'Gepland',name:'Ada — Project A',hoursPerDay:'6.5'});
  expect(stored[0]).not.toHaveProperty('hoursPerWeek');
 });
 

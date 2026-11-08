@@ -14,3 +14,19 @@ export const number = n => new Intl.NumberFormat('nl-NL', { maximumFractionDigit
 
 /** "1 registratie" tegenover "3 registraties": een telwoord zonder meervoudsfout. */
 export const plural = (count, one, many) => `${number(count)} ${count === 1 ? one : many}`;
+
+const pad2 = n => String(n).padStart(2, '0');
+/** "8:30" — zo schrijft iedereen het op een urenbriefje. */
+export function formatHours(value) {
+ if (value === '' || value === undefined || value === null || !Number.isFinite(Number(value))) return value ?? '';
+ const total = Math.round(Number(value) * 60);
+ return `${Math.floor(total / 60)}:${pad2(total % 60)}`;
+}
+export function formatPause(value) {
+ const minutes = Number(value);
+ if (value === '' || value === undefined || !Number.isFinite(minutes)) return value ?? '';
+ if (minutes === 0) return 'Geen';
+ if (minutes === 60) return '1 uur';
+ return `${minutes} min`;
+}
+

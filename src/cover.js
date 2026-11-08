@@ -1,5 +1,5 @@
 import { isoToday, shiftDays } from './alerts';
-import { formatDate } from './format';
+import { formatDate, formatHours } from './format';
 
 export const WINDOW_DAYS = 28;
 
@@ -85,7 +85,7 @@ export function coverRows(data, window, iso = isoToday(), { onlyAvailable = fals
      to: item.end ? between(window.start, item.end) : window.days.length - 1,
      kind: KIND_OF[item.status],
      label: project?.name || 'Verwijderd project',
-     note: item.role || '',
+     note: [item.role, item.hoursPerDay ? `${formatHours(item.hoursPerDay)} uur per dag` : ''].filter(Boolean).join(' · '),
      href: project ? `#/projecten/${project.id}` : `#/inzet/${item.id}`,
      inzetId: item.id,
     };

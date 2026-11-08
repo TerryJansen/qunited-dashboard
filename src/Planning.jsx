@@ -3,6 +3,7 @@ import { isoToday, shiftDays } from './alerts';
 import { week, dayInfo } from './agenda';
 import { modules } from './modules';
 import useNarrow from './useNarrow';
+import { DurationWheel, formatHours } from './TimeWheel';
 
 const KIND = { actief: 'Ingezet', gepland: 'Gepland', afgerond: 'Afgerond', afwezig: 'Afwezig' };
 
@@ -40,6 +41,7 @@ function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
   if (!draft.projectId) { setMessage('Kies een project.'); return; }
   if (!draft.start) { setMessage('Vul in vanaf welke dag.'); return; }
   if (draft.end && draft.end < draft.start) { setMessage('"Tot en met" mag niet vóór "Van" liggen.'); return; }
+  if (!(Number(draft.hoursPerDay) > 0)) { setMessage('Kies hoeveel uur per dag, meer dan 0:00.'); return; }
   const clean = { ...draft, role: (draft.role || '').trim() };
   if (clean.status !== 'Geannuleerd') clean.status = statusFor(clean, today);
   clean.name = modules.inzet.derivedName(clean, data);
@@ -79,11 +81,12 @@ function PlanDialog({ data, plan, today, onClose, onSave, onDelete }) {
       <button type="button" onClick={() => set('end', shiftDays(draft.start, 13))}>2 weken</button>
       <button type="button" onClick={() => set('end', '')}>Nog onbekend</button>
      </div>}
+     <DurationWheel label="Uren per dag" value={draft.hoursPerDay ?? ''} onChange={value => set('hoursPerDay', value)} />
      <label><span>Rol op project <span className="plan-optional">(mag leeg)</span></span>
       <input type="text" maxLength={200} value={draft.role || ''} onChange={event => set('role', event.target.value)} />
      </label>
      <p className="plan-summary" aria-live="polite">
-      {draft.start ? <>Van {longDate(draft.start)} {draft.end ? <>tot en met {longDate(draft.end)}</> : 'zonder einddatum'}.</> : ''}
+      {draft.start ? <>Van {longDate(draft.start)} {draft.end ? <>tot en met {longDate(draft.end)}</> : 'zonder einddatum'}{Number(draft.hoursPerDay) > 0 ? <>, {formatHours(draft.hoursPerDay)} uur per dag</> : ''}.</> : ''}
      </p>
     </>}
    {message && <p role="alert" className="error">{message}</p>}
@@ -126,8 +129,9 @@ export default function Planning({ data, save }) {
  const [picked, setPicked] = useState(view.todayIndex ?? 0);
  const day = Math.min(picked, 6);
 
- const addFor = (employeeId, iso) => setPlan({ record: { employeeId: employeeId || '', projectId: '', start: iso, end: iso, role: '' } });
- const edit = id => { const record = data.inzet.find(item => item.id === id); if (record) setPlan({ record: { ...record } }); };
+ const addFor = (employeeId, iso) => setPlan({ record: { employeeId: employeeId || '', projectId: '', start: iso, end: iso, role: '', hoursPerDay: '8' } });
+ // Een inzet van vóór de uren per dag begint op 8:00; je ziet het in het wiel en past het aan.
+ const edit = id => { const record = data.inzet.find(item => item.id === id); if (record) setPlan({ record: { hoursPerDay: '8', ...record } }); };
  function store(record) {
   const exists = data.inzet.some(item => item.id === record.id);
   const next = exists ? data.inzet.map(item => item.id === record.id ? record : item) : [...data.inzet, { ...record, id: crypto.randomUUID() }];

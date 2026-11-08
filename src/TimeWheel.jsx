@@ -1,4 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { formatHours, formatPause } from './format';
+
+export { formatHours, formatPause };
 
 // Een draaiwiel zoals op een telefoon: veeg of scroll naar de juiste waarde, of tik erop.
 // Met het toetsenbord werkt het als een gewone draaiknop (pijltjes, Home, End).
@@ -19,20 +22,6 @@ export function splitHours(value) {
  return { h, m: h === 24 ? 0 : total % 60 };
 }
 export const joinHours = (h, m) => String(h === 24 ? 24 : h + m / 60);
-/** "8:30" — zo schrijft iedereen het op een urenbriefje. */
-export function formatHours(value) {
- if (value === '' || value === undefined || value === null || !Number.isFinite(Number(value))) return value ?? '';
- const total = Math.round(Number(value) * 60);
- return `${Math.floor(total / 60)}:${pad(total % 60)}`;
-}
-export function formatPause(value) {
- const minutes = Number(value);
- if (value === '' || value === undefined || !Number.isFinite(minutes)) return value ?? '';
- if (minutes === 0) return 'Geen';
- if (minutes === 60) return '1 uur';
- return `${minutes} min`;
-}
-
 function Column({ label, values, index, onChange, format }) {
  const ref = useRef(null);
  const timer = useRef(0);
@@ -41,18 +30,25 @@ function Column({ label, values, index, onChange, format }) {
 
  // De gekozen waarde in het midden zetten, ook als hij van buitenaf verandert.
  useEffect(() => {
-  const el = ref.current;
-  if (!el) return;
-  const target = index * ITEM;
-  if (Math.abs(el.scrollTop - target) < 2) return;
-  ignore.current = true;
-  const instant = first.current || still();
-  el.scrollTo({ top: target, behavior: instant ? 'auto' : 'smooth' });
-  first.current = false;
-  clearTimeout(timer.current);
-  // Een directe sprong is meteen klaar; een vloeiende draai krijgt even de tijd.
-  if (instant) requestAnimationFrame(() => { ignore.current = false; });
-  else timer.current = setTimeout(() => { ignore.current = false; }, 400);
+  let frame = 0;
+  function sync() {
+   const el = ref.current;
+   if (!el) return;
+   // In een venster dat nog opengaat heeft het wiel even geen hoogte; wacht daar op.
+   if (!el.clientHeight) { frame = requestAnimationFrame(sync); return; }
+   const target = index * ITEM;
+   if (Math.abs(el.scrollTop - target) < 2) { first.current = false; return; }
+   ignore.current = true;
+   const instant = first.current || still();
+   el.scrollTo({ top: target, behavior: instant ? 'auto' : 'smooth' });
+   first.current = false;
+   clearTimeout(timer.current);
+   // Een directe sprong is meteen klaar; een vloeiende draai krijgt even de tijd.
+   if (instant) frame = requestAnimationFrame(() => { ignore.current = false; });
+   else timer.current = setTimeout(() => { ignore.current = false; }, 400);
+  }
+  sync();
+  return () => cancelAnimationFrame(frame);
  }, [index]);
  useEffect(() => () => clearTimeout(timer.current), []);
 
