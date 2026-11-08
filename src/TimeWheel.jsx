@@ -9,20 +9,20 @@ export { formatHours, formatPause, formatMinutes };
 const ITEM = 44;      // hoogte van één regel, groot genoeg voor een duim
 const VISIBLE = 5;    // regels in beeld; de middelste is gekozen
 export const HOURS = Array.from({ length: 25 }, (_, h) => h);   // 0 tot en met 24
-export const MINUTES = [0, 15, 30, 45];
+export const MINUTES = Array.from({ length: 60 }, (_, m) => m);   // per minuut, 00 tot en met 59
 export const PAUSES = [0, 15, 30, 45, 60];
 export const TRAVEL = [0, 15, 30, 45, 60, 90, 120, 180];
 
 const pad = n => String(n).padStart(2, '0');
 const still = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Uren als decimaal getal ("8.5") naar uren en minuten op het kwartier. */
+/** Uren als decimaal getal ("8.5") naar hele uren en minuten. */
 export function splitHours(value) {
- const total = Math.round((Number(value) || 0) * 60 / 15) * 15;
+ const total = Math.round((Number(value) || 0) * 60);
  const h = Math.min(24, Math.floor(total / 60));
  return { h, m: h === 24 ? 0 : total % 60 };
 }
-export const joinHours = (h, m) => String(h === 24 ? 24 : h + m / 60);
+export const joinHours = (h, m) => String(h === 24 ? 24 : Math.round((h + m / 60) * 1e6) / 1e6);
 function Column({ label, values, index, onChange, format }) {
  const ref = useRef(null);
  const timer = useRef(0);
@@ -66,7 +66,8 @@ function Column({ label, values, index, onChange, format }) {
  }
 
  function key(event) {
-  const step = { ArrowUp: 1, ArrowDown: -1, PageUp: 4, PageDown: -4 }[event.key];
+  const page = values.length > 30 ? 10 : 4;
+  const step = { ArrowUp: 1, ArrowDown: -1, PageUp: page, PageDown: -page }[event.key];
   let next = index;
   if (step) next = index + step;
   else if (event.key === 'Home') next = 0;
@@ -87,7 +88,7 @@ function Column({ label, values, index, onChange, format }) {
  </div>;
 }
 
-/** Gewerkte tijd van 0:00 tot 24:00, per kwartier. */
+/** Gewerkte tijd van 0:00 tot 24:00, per minuut. */
 export function DurationWheel({ label, value, onChange, required }) {
  const { h, m } = splitHours(value);
  const id = `wheel-${label.replace(/\W+/g, '')}`;
@@ -105,8 +106,9 @@ export function DurationWheel({ label, value, onChange, required }) {
  </div>;
 }
 
-/** Pauze: altijd zichtbaar, één tik. */
+/** Pauze: altijd zichtbaar, één tik voor de gewone waarden, en per minuut zelf in te vullen. */
 export function PauseChoice({ label, value, onChange, required, options = PAUSES, name = 'pauze', hint }) {
+ const own = value !== '' && value !== undefined && !options.map(String).includes(String(value));
  return <fieldset className="field-block pause-choice">
   <legend className="field-label">{label}{required && <span aria-hidden="true"> *</span>}{hint && <span className="plan-optional"> {hint}</span>}</legend>
   <div className="chips">
@@ -116,6 +118,18 @@ export function PauseChoice({ label, value, onChange, required, options = PAUSES
     {formatMinutes(minutes)}
    </label>)}
   </div>
+  <label className={`minutes-own${own ? ' is-on' : ''}`}>
+   <span>Of zelf</span>
+   <input type="number" inputMode="numeric" min={0} max={600} step={1} aria-label={`${label} in minuten`}
+    value={own ? value : ''} placeholder="0"
+    onChange={event => {
+     const raw = event.target.value;
+     if (raw === '') { onChange(''); return; }
+     const minutes = Math.max(0, Math.min(600, Math.round(Number(raw))));
+     if (Number.isFinite(minutes)) onChange(String(minutes));
+    }} />
+   <span>minuten</span>
+  </label>
  </fieldset>;
 }
 

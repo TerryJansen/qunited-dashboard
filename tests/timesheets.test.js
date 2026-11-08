@@ -10,7 +10,7 @@ test('Urenstaten validates, cancels, saves references and persists CRUD',async({
  await page.getByLabel('Medewerker',{exact:true}).selectOption('e1');
  await page.getByLabel('Project',{exact:true}).selectOption('p1');
  await page.getByLabel('Werkdatum').fill('2026-11-02');
- const hours=page.getByRole('spinbutton',{name:'Uren'}), minutes=page.getByRole('spinbutton',{name:'Minuten'});
+ const hours=page.getByRole('spinbutton',{name:'Uren',exact:true}), minutes=page.getByRole('spinbutton',{name:'Minuten',exact:true});
  // een nieuwe regel begint op 8:00 met 30 minuten pauze
  await expect(hours).toHaveAttribute('aria-valuenow','8');
  await expect(minutes).toHaveAttribute('aria-valuenow','0');
@@ -20,7 +20,7 @@ test('Urenstaten validates, cancels, saves references and persists CRUD',async({
  await expect(page.getByRole('alert')).toContainText('groter dan 0:00');
  await expect(row(page,'Installatie')).toHaveCount(0);
  for(let i=0;i<7;i++)await hours.press('ArrowUp');
- await minutes.focus();await minutes.press('ArrowUp');await minutes.press('ArrowUp');
+ await minutes.focus();for(let i=0;i<3;i++)await minutes.press('PageUp');
  await expect(minutes).toHaveAttribute('aria-valuetext','30');
  await page.getByText('45 min',{exact:true}).click();
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();
@@ -54,7 +54,7 @@ test('Urenstaten validates, cancels, saves references and persists CRUD',async({
 test('the hours wheel turns with the mouse wheel and a tap, and 24:00 is the end',async({page})=>{
  await seed(page,data);
  await page.goto('/#/urenstaten/nieuw');
- const hours=page.getByRole('spinbutton',{name:'Uren'}), minutes=page.getByRole('spinbutton',{name:'Minuten'});
+ const hours=page.getByRole('spinbutton',{name:'Uren',exact:true}), minutes=page.getByRole('spinbutton',{name:'Minuten',exact:true});
  await expect(hours).toHaveAttribute('aria-valuenow','8');
  await hours.hover();await page.mouse.wheel(0,44*2);
  await expect(hours).toHaveAttribute('aria-valuenow','10');
@@ -78,4 +78,27 @@ test('pause is always there, with one tap per choice, also on a phone',async({pa
  const box=await group.getByText('1 uur').boundingBox();
  expect(box.height).toBeGreaterThanOrEqual(44);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('time is set to the minute: 7:37 worked with 37 minutes pause typed in',async({page})=>{
+ await seed(page,data);
+ await page.goto('/#/urenstaten/nieuw');
+ await page.getByLabel('Omschrijving',{exact:true}).fill('Inspectie');
+ await page.getByLabel('Medewerker',{exact:true}).selectOption('e1');
+ await page.getByLabel('Project',{exact:true}).selectOption('p1');
+ await page.getByLabel('Werkdatum').fill('2026-11-02');
+ const hours=page.getByRole('spinbutton',{name:'Uren',exact:true}), minutes=page.getByRole('spinbutton',{name:'Minuten',exact:true});
+ await hours.focus();await hours.press('ArrowDown');
+ await minutes.focus();for(let i=0;i<3;i++)await minutes.press('PageUp');for(let i=0;i<7;i++)await minutes.press('ArrowUp');
+ await expect(minutes).toHaveAttribute('aria-valuenow','37');
+ await expect(page.getByText('7 uur en 37 minuten')).toBeVisible();
+ await page.getByLabel('Pauze in minuten').fill('37');
+ await expect(page.getByRole('radio',{name:'30 min'})).not.toBeChecked();
+ await page.getByRole('button',{name:'Opslaan',exact:true}).click();
+ const record=row(page,'Inspectie');
+ await expect(record).toContainText('7:37');
+ await expect(record).toContainText('37 min');
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).urenstaten[0]);
+ expect(Math.round(Number(stored.hours)*60)).toBe(457);
+ expect(stored.pause).toBe('37');
 });

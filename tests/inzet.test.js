@@ -27,26 +27,26 @@ test('click a free day in the planning to put someone on a project',async({page}
  await expect(dialog.getByLabel('Tot en met')).toHaveValue(plus(monday(),11));
  await dialog.getByLabel(/Rol op project/).fill('Inspecteur');
  // uren per dag: begint op 8:00, hier 6:30
- const hours=dialog.getByRole('spinbutton',{name:'Uren'}), minutes=dialog.getByRole('spinbutton',{name:'Minuten'});
+ const hours=dialog.getByRole('spinbutton',{name:'Uren',exact:true}), minutes=dialog.getByRole('spinbutton',{name:'Minuten',exact:true});
  await expect(hours).toHaveAttribute('aria-valuenow','8');
  // het wiel staat ook zichtbaar op 08, niet op 00
  await expect.poll(()=>hours.evaluate(el=>Math.round(el.scrollTop/44))).toBe(8);
  await hours.focus();await hours.press('ArrowDown');await hours.press('ArrowDown');
- await minutes.focus();await minutes.press('ArrowUp');await minutes.press('ArrowUp');
+ await minutes.focus();for(let i=0;i<3;i++)await minutes.press('PageUp');
  await expect(dialog.locator('.plan-summary')).toContainText('6:30 uur per dag');
  // pauze en reistijd: pauze begint op 30 min, reistijd op geen
  const pause=dialog.getByRole('group',{name:/Pauze per dag/}), travel=dialog.getByRole('group',{name:/Reistijd per dag/});
  await expect(pause.getByRole('radio',{name:'30 min'})).toBeChecked();
  await expect(travel.getByRole('radio',{name:'Geen'})).toBeChecked();
  await pause.getByText('45 min',{exact:true}).click();
- await travel.getByText('1,5 uur',{exact:true}).click();
- await expect(dialog.locator('.plan-summary')).toContainText('45 min pauze, 1,5 uur reistijd');
+ await travel.getByText('1 uur 30 min',{exact:true}).click();
+ await expect(dialog.locator('.plan-summary')).toContainText('45 min pauze, 1 uur 30 min reistijd');
  await dialog.getByRole('button',{name:'Opslaan'}).click();
  await expect(dialog).toHaveCount(0);
  const ada=page.getByRole('row').filter({hasText:'Ada'});
  const block=ada.getByRole('button',{name:/Project A/});
  await expect(block).toContainText('Gepland');
- await expect(block).toContainText('Inspecteur · 6:30 uur per dag · 45 min pauze · 1,5 uur reistijd');
+ await expect(block).toContainText('Inspecteur · 6:30 uur per dag · 45 min pauze · 1 uur 30 min reistijd');
  expect(await ada.locator('td').first().getAttribute('colspan')).toBe('5');
  await page.reload();
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).inzet);

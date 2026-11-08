@@ -28,8 +28,8 @@ export function formatMinutes(value) {
  if (value === '' || value === undefined || value === null || !Number.isFinite(minutes)) return value ?? '';
  if (minutes === 0) return 'Geen';
  if (minutes < 60) return `${minutes} min`;
- const hours = minutes / 60;
- return `${String(hours).replace('.', ',')} uur`;
+ const hours = Math.floor(minutes / 60), rest = minutes % 60;
+ return rest ? `${hours} uur ${rest} min` : `${hours} uur`;
 }
 export const formatPause = formatMinutes;
 
