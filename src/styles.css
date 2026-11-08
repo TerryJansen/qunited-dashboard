@@ -755,3 +755,42 @@ button.agenda-block:active:not(:disabled) { transform: none; }
 .plan-day .wheel, .plan-day .chip { background: var(--surface); }
 .plan-day .chip.is-on { background: var(--navy); }
 @media (max-width: 860px) { .plan-dialog { width: 100vw; } }
+
+/* ---------- rapportages: documenten per project ---------- */
+.reports { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--gap); align-items: start; }
+.reports-projects { position: sticky; top: 16px; display: grid; gap: 10px; }
+.reports-projects ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.reports-projects button {
+ display: grid; gap: 2px; justify-items: start; justify-content: stretch; width: 100%; height: auto; padding: 12px 14px;
+ border: 0; border-radius: 10px; background: transparent; text-align: left; box-shadow: none;
+}
+.reports-projects button:hover:not(:disabled) { background: var(--raised); }
+.reports-projects button[aria-current] { background: var(--active); box-shadow: inset 3px 0 0 var(--lime); }
+.reports-name { font-weight: 600; font-size: 15px; color: var(--text); }
+.reports-meta { font-size: var(--fs-small); color: var(--muted); font-weight: 400; }
+.reports-sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.reports-pick { display: grid; gap: 6px; font-weight: 500; margin-bottom: 16px; }
+.reports-pick select { height: 48px; font-size: 16px; }
+.shelf { display: grid; gap: 20px; }
+.shelf-upload fieldset { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 20px; border: 0; border-radius: 12px; background: var(--raised); }
+.shelf-upload legend { float: left; width: 100%; padding: 0; margin: 0 0 4px; font-family: var(--font-head); font-weight: 500; font-size: 16px; grid-column: 1 / -1; }
+.shelf-upload label:not(.chip) { display: grid; gap: 6px; font-weight: 500; align-content: start; }
+.shelf-upload input:not([type="radio"]) { height: 44px; background: var(--surface); }
+.shelf-upload input[type="file"] { padding: 8px; height: auto; }
+.shelf-hint { font-size: var(--fs-small); color: var(--muted); font-weight: 400; }
+.shelf-upload .pause-choice { grid-column: 1 / -1; }
+.shelf-upload .chip { background: var(--surface); }
+.shelf-upload .chip.is-on { background: var(--navy); }
+.shelf-upload .actions { grid-column: 1 / -1; margin: 0; }
+.shelf-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.shelf-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.shelf-doc { display: grid; gap: 3px; min-width: 0; }
+.shelf-doc b { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.shelf-doc span { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.shelf-actions { display: flex; gap: 8px; flex: none; }
+@media (max-width: 860px) {
+ .reports { grid-template-columns: minmax(0, 1fr); }
+ .shelf-upload fieldset { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+ .shelf-list li { flex-direction: column; align-items: stretch; }
+ .shelf-actions button { flex: 1; }
+}

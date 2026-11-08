@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { modules } from './modules';
 import { migrate, isValid, pickModules, emptyData } from './storage';
-import { getAllAttachments, replaceAllAttachments, clearAttachments, FILE_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_BYTES } from './files';
+import { getAllAttachments, replaceAllAttachments, clearAttachments, FILE_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_BYTES, PROJECT_KINDS, MAX_PROJECT_BYTES } from './files';
 import { formatDate, plural, number } from './format';
 import { markBackup, lastBackup, requestPersistence } from './persist';
 import { StorageNotice } from './StorageNotice';
@@ -34,14 +34,17 @@ function save(filename, text) {
 }
 
 // Eén bijlage uit een back-upbestand controleren; onbetrouwbare items worden overgeslagen, niet opgeslagen.
-function checkAttachment(item, personIds) {
+// Een bestand hoort bij een medewerker (cv, certificaat) of bij een project (rapporten en documenten).
+function checkAttachment(item, personIds, projectIds) {
  if (!item || typeof item !== 'object' || Array.isArray(item)) return 'ongeldig';
- const strings = ['id', 'personId', 'kind', 'name', 'type', 'data'];
+ const forProject = typeof item.projectId === 'string' && item.projectId !== '';
+ const strings = ['id', forProject ? 'projectId' : 'personId', 'kind', 'name', 'type', 'data'];
  if (strings.some(key => typeof item[key] !== 'string' || item[key] === '')) return 'ongeldig';
- if (!Object.hasOwn(ALLOWED_EXTENSIONS, item.kind)) return 'ongeldig';
+ if (forProject ? !PROJECT_KINDS.includes(item.kind) : !Object.hasOwn(ALLOWED_EXTENSIONS, item.kind)) return 'ongeldig';
  if (!allowedTypes.has(item.type)) return 'ongeldig';
- if (typeof item.size !== 'number' || !Number.isFinite(item.size) || item.size <= 0 || item.size > MAX_FILE_BYTES) return 'ongeldig';
- if (!personIds.has(item.personId)) return 'zonder medewerker';
+ const limit = forProject ? MAX_PROJECT_BYTES : MAX_FILE_BYTES;
+ if (typeof item.size !== 'number' || !Number.isFinite(item.size) || item.size <= 0 || item.size > limit) return 'ongeldig';
+ if (forProject ? !projectIds.has(item.projectId) : !personIds.has(item.personId)) return 'zonder eigenaar';
  return '';
 }
 
@@ -61,8 +64,8 @@ export default function Backup({ data, onRestore, readOnly }) {
    if (withFiles) {
     const stored = await getAllAttachments();
     payload.attachments = await Promise.all(stored.map(async file => ({
-     id: file.id, personId: file.personId, kind: file.kind, name: file.name, type: file.type, size: file.size,
-     title: file.title || '', expiry: file.expiry || '', data: await toBase64(file.blob),
+     id: file.id, ...(file.projectId ? { projectId: file.projectId } : { personId: file.personId }), kind: file.kind, name: file.name, type: file.type, size: file.size,
+     title: file.title || '', expiry: file.expiry || '', date: file.date || '', data: await toBase64(file.blob),
     })));
    }
    save(`qunited-backup-${today()}.json`, JSON.stringify(payload));
@@ -83,10 +86,11 @@ export default function Backup({ data, onRestore, readOnly }) {
    const records = migrate(parsed.records);
    if (!isValid(records)) throw new Error('Ongeldige gegevens');
    const personIds = new Set(records.personeel.map(person => person.id));
+   const projectIds = new Set(records.projecten.map(project => project.id));
    const list = Array.isArray(parsed.attachments) ? parsed.attachments : [];
-   const accepted = [], skipped = { ongeldig: 0, 'zonder medewerker': 0 };
+   const accepted = [], skipped = { ongeldig: 0, 'zonder eigenaar': 0 };
    for (const item of list) {
-    const problem = checkAttachment(item, personIds);
+    const problem = checkAttachment(item, personIds, projectIds);
     if (problem) skipped[problem] += 1; else accepted.push(item);
    }
    setPreview({
@@ -111,8 +115,8 @@ export default function Backup({ data, onRestore, readOnly }) {
   setBusy(true); setError('');
   try {
    await replaceAllAttachments(preview.attachments.map(item => ({
-    id: item.id, personId: item.personId, kind: item.kind, name: item.name, type: item.type, size: item.size,
-    title: item.title || '', expiry: item.expiry || '', blob: toBlob(item.data, item.type),
+    id: item.id, ...(item.projectId ? { projectId: item.projectId } : { personId: item.personId }), kind: item.kind, name: item.name, type: item.type, size: item.size,
+    title: item.title || '', expiry: item.expiry || '', date: item.date || '', blob: toBlob(item.data, item.type),
    })));
   } catch {
    setError('Bestanden terugzetten mislukt. Browseropslag is niet beschikbaar of vol. Je gegevens zijn niet gewijzigd.');
@@ -131,7 +135,7 @@ export default function Backup({ data, onRestore, readOnly }) {
  }
 
  async function wipe() {
-  if (!confirm('Alle registraties, cv’s en certificaten uit deze browser verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  if (!confirm('Alle registraties, cv’s, certificaten en projectdocumenten uit deze browser verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
   setBusy(true); setError(''); setNote('');
   try { await clearAttachments(); } catch {
    setError('Bestanden wissen mislukt. Er is niets gewijzigd.'); setBusy(false); return;
@@ -159,12 +163,12 @@ export default function Backup({ data, onRestore, readOnly }) {
    <div className="label-col">
     <h2>Back-up downloaden</h2>
     <p>{lastBackup() ? `Laatste back-up: ${formatDate(lastBackup().slice(0, 10))}. ` : 'Je hebt nog geen back-up gemaakt. '}
-     Het bestand bevat je {plural(recordCount, 'registratie', 'registraties')} en, als je dat aanvinkt, de cv’s en certificaten. Het blijft op je eigen apparaat; er wordt niets verstuurd. Bewaar het als vertrouwelijk: personeelsgegevens staan er leesbaar in.</p>
+     Het bestand bevat je {plural(recordCount, 'registratie', 'registraties')} en, als je dat aanvinkt, de cv’s, certificaten en projectdocumenten. Het blijft op je eigen apparaat; er wordt niets verstuurd. Bewaar het als vertrouwelijk: personeelsgegevens staan er leesbaar in.</p>
    </div>
    <div className="settings-panel">
     <label className="checkbox">
      <input type="checkbox" checked={withFiles} onChange={event => setWithFiles(event.target.checked)} />
-     Cv’s en certificaten meenemen (groter bestand)
+     Bestanden meenemen: cv’s, certificaten en projectdocumenten (groter bestand)
     </label>
     <div className="actions">
      <button className="primary" disabled={busy} onClick={download}>Back-up downloaden</button>
@@ -189,11 +193,11 @@ export default function Backup({ data, onRestore, readOnly }) {
         <thead><tr><th>Onderdeel</th><th className="n">Aantal</th></tr></thead>
         <tbody>
          {preview.counts.map(([title, count]) => <tr key={title}><td>{title}</td><td className="n num">{number(count)}</td></tr>)}
-         <tr><td>Cv’s en certificaten</td><td className="n num" data-testid="preview-files">{number(preview.attachments.length)}</td></tr>
+         <tr><td>Bestanden</td><td className="n num" data-testid="preview-files">{number(preview.attachments.length)}</td></tr>
         </tbody>
        </table>
        {preview.skipped.ongeldig > 0 && <p className="kpi-note">{plural(preview.skipped.ongeldig, 'bestand wordt', 'bestanden worden')} overgeslagen: onbekend type of te groot.</p>}
-       {preview.skipped['zonder medewerker'] > 0 && <p className="kpi-note">{plural(preview.skipped['zonder medewerker'], 'bestand wordt', 'bestanden worden')} overgeslagen: de medewerker zit niet in deze back-up.</p>}
+       {preview.skipped['zonder eigenaar'] > 0 && <p className="kpi-note">{plural(preview.skipped['zonder eigenaar'], 'bestand wordt', 'bestanden worden')} overgeslagen: de medewerker of het project zit niet in deze back-up.</p>}
        <div className="actions">
         <button className="danger" disabled={busy} onClick={restore}>Alles vervangen</button>
         <button disabled={busy} onClick={() => setPreview(null)}>Annuleren</button>
@@ -206,7 +210,7 @@ export default function Backup({ data, onRestore, readOnly }) {
   <div className="settings-row">
    <div className="label-col">
     <h2>Werkruimte wissen</h2>
-    <p>Verwijdert alle registraties, cv’s en certificaten uit deze browser. Gebruik dit als je het apparaat of browserprofiel niet meer zelf gebruikt. Dit kan niet ongedaan worden gemaakt.</p>
+    <p>Verwijdert alle registraties, cv’s, certificaten en projectdocumenten uit deze browser. Gebruik dit als je het apparaat of browserprofiel niet meer zelf gebruikt. Dit kan niet ongedaan worden gemaakt.</p>
    </div>
    <div className="settings-panel">
     <div className="actions">

@@ -13,6 +13,7 @@ import Login from './Login';
 import Logo from './Logo';
 import { signedIn, signOut } from './session';
 import Attachments, { getAttachments } from './Attachments';
+import { getProjectDocuments } from './files';
 import Detail from './Detail';
 import RecordForm from './RecordForm';
 import { money, formatDate, plural, number } from './format';
@@ -118,7 +119,7 @@ function App() {
     <div className="canvas">
      {error && <p role="alert" className="error">{error}</p>}
      {page === 'dashboard' ? <Dashboard data={data} />
-      : page === 'rapportages' ? <Reports data={data} />
+      : page === 'rapportages' ? <Reports data={data} projectId={params.get('project') || ''} />
        : page === 'backup' ? <Backup data={data} onRestore={write} readOnly={!!initial.error} />
        : page === 'hulp' ? <Assistant data={data} />
        : page === 'planning' ? <Planning data={data} save={records => write({ ...data, inzet: records })} />
@@ -167,6 +168,17 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
   if (blocking.length) {
    setDeleteError(`Verwijder of wijzig eerst de gekoppelde registraties bij ${sentence(blocking)}.`);
    return;
+  }
+  if (id === 'projecten') {
+   try {
+    if ((await getProjectDocuments(record.id)).length) {
+     setDeleteError('Verwijder eerst de documenten bij dit project, onder Rapportages.');
+     return;
+    }
+   } catch {
+    setDeleteError('Documenten kunnen niet worden gecontroleerd. Project is niet verwijderd.');
+    return;
+   }
   }
   if (id === 'personeel') {
    try {

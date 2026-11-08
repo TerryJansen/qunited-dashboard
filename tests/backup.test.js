@@ -106,7 +106,7 @@ test('a backup without files stays small and still restores records',async({page
  await start(page);
  await addCertificate(page);
  await page.goto('/#/backup');
- await page.getByLabel('Cv’s en certificaten meenemen (groter bestand)').uncheck();
+ await page.getByLabel(/Bestanden meenemen/).uncheck();
  const waiting=page.waitForEvent('download');
  await page.getByRole('button',{name:'Back-up downloaden'}).click();
  const file=await waiting;

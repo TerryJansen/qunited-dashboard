@@ -9,8 +9,15 @@ export const FILE_TYPES = {
  jpg: 'image/jpeg',
  jpeg: 'image/jpeg',
  png: 'image/png',
+ xls: 'application/vnd.ms-excel',
+ xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 };
 export const ALLOWED_EXTENSIONS = { CV: ['pdf', 'doc', 'docx'], Certificaat: ['pdf', 'jpg', 'jpeg', 'png'] };
+
+// Documenten en rapporten per project, op de pagina Rapportages. Rapporten met foto's zijn groter dan een cv.
+export const PROJECT_KINDS = ['Rapport', 'Inspectierapport', 'Tekening', 'Foto', 'Overig'];
+export const PROJECT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
+export const MAX_PROJECT_BYTES = 25 * 1024 * 1024;
 
 function open() {
  return new Promise((resolve, reject) => {
@@ -49,6 +56,9 @@ async function batch(apply) {
 export const getAllAttachments = () => one('readonly', s => s.getAll());
 export async function getAttachments(personId) {
  return (await getAllAttachments()).filter(file => file.personId === personId);
+}
+export async function getProjectDocuments(projectId) {
+ return (await getAllAttachments()).filter(file => file.projectId === projectId);
 }
 export const getAttachment = id => one('readonly', s => s.get(id));
 export const putAttachment = item => one('readwrite', s => s.put(item));

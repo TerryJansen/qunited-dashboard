@@ -6,6 +6,8 @@ import { isoToday } from './alerts';
 import { staffing } from './cover';
 import RecordForm from './RecordForm';
 import Attachments from './Attachments';
+import { DocumentShelf } from './Reports';
+import { getProjectDocuments } from './files';
 
 const titleOf = (key, record, data) => modules[key].derivedName ? modules[key].derivedName(record, data) : record.name;
 const sentence = items => items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} en ${items.at(-1)}`;
@@ -51,12 +53,19 @@ export default function Detail({ id, recordId, data, save }) {
   rows: data[dependent.module].filter(other => other[dependent.field] === record.id),
  })).filter(group => group.rows.length);
 
- function remove() {
+ async function remove() {
   if (!confirm(`“${titleOf(id, record, data)}” verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
   const blocking = [...new Set(related.map(group => group.title))];
   if (blocking.length) {
    setDeleteError(`Verwijder of wijzig eerst de gekoppelde registraties bij ${sentence(blocking)}.`);
    return;
+  }
+  if (id === 'projecten') {
+   const documents = await getProjectDocuments(record.id).catch(() => null);
+   if (documents === null || documents.length) {
+    setDeleteError(documents === null ? 'Documenten kunnen niet worden gecontroleerd. Project is niet verwijderd.' : 'Verwijder eerst de documenten bij dit project.');
+    return;
+   }
   }
   if (save(data[id].filter(other => other.id !== record.id))) location.hash = `#/${id}`;
  }
@@ -132,6 +141,11 @@ export default function Detail({ id, recordId, data, save }) {
     <a href={`#/${group.module}`}>Alle {modules[group.module].plural} bekijken</a> · {group.rows.length} in totaal
    </p>}
   </section>)}
+
+  {id === 'projecten' && <section className="panel" aria-label="Documenten en rapporten">
+   <header><h2>Documenten en rapporten</h2><a className="card-link" href={`#/rapportages?project=${record.id}`}>Naar Rapportages</a></header>
+   <DocumentShelf project={record} />
+  </section>}
 
   {id === 'personeel' && <section className="panel">
    <header><h2>Cv &amp; certificaten</h2></header>

@@ -48,7 +48,7 @@ Hoe het dashboard werkt:
 - Een medewerker voeg je één keer toe bij Personeel; daarna kies je hem overal uit een lijst. Cv's en certificaten voeg je toe bij Personeel via "Bestanden" (eerst de medewerker opslaan).
 - Planning is de weekagenda. Klik op een vrije dag bij een medewerker om hem op een project te zetten (project, van, tot en met, rol). Klik op een blok om die inzet te wijzigen of te verwijderen. Bladeren met "Vorige week" en "Volgende week".
 - Het Dashboard toont wie waar ingezet is, wie beschikbaar is, actiepunten, lopende projecten en wie binnenkort vrijkomt.
-- Rapportages toont uren per week, per project en per medewerker, met CSV-downloads.
+- Rapportages is de plek voor documenten en rapporten per project: kies links het project, voeg een bestand toe (PDF, Word, Excel, JPG of PNG, tot 25 MB) met titel, datum en soort (Rapport, Inspectierapport, Tekening, Foto, Overig), en open, download of verwijder het later. Op de projectpagina staan dezelfde documenten.
 - Back-up maakt één bestand van alle gegevens ("Back-up downloaden") en kan dat weer terugzetten. Gegevens staan alleen in deze browser op dit apparaat; een back-up op een USB-stick is verstandig.
 - Er zijn geen accounts en er is geen centrale opslag. Wat je op de telefoon invoert, staat niet op de laptop.
 

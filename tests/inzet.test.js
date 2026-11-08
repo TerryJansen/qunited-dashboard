@@ -104,8 +104,7 @@ test('the title follows a renamed project instead of going stale',async({page})=
  await expect(row(page,'Ada — Project A2')).toBeVisible();
 });
 
-test('today\'s list and the occupancy report separate busy from available staff',async({page})=>{
- const todayText=new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+test('today\'s list separate busy from available staff',async({page})=>{
  await seed(page,{...base,inzet:[{id:'i1',name:'Ada — Project A',status:'Actief',employeeId:'e1',projectId:'p1',start:'2020-01-01',end:'2099-12-31'}]});
  await page.goto('/#/dashboard');
  await expect(page.getByTestId('deployed-count')).toContainText('1');
@@ -118,12 +117,4 @@ test('today\'s list and the occupancy report separate busy from available staff'
  // het filter op het kerncijfer laat alleen wie niet ingezet is staan
  await page.getByRole('button',{name:/Beschikbaar vandaag/}).click();
  await expect(today.locator('li')).toHaveCount(1);
- await navigate(page,'Rapportages');
- await expect(page.getByRole('heading',{name:`Bezetting vandaag (${todayText})`})).toBeVisible();
- const table=page.getByRole('table',{name:'Bezetting vandaag'});
- await expect(table.getByRole('row').filter({hasText:'Ada'})).toContainText('Project A');
- await expect(table.getByRole('row').filter({hasText:'Bram'})).toContainText('Beschikbaar');
- const waiting=page.waitForEvent('download');
- await page.getByRole('button',{name:'Download inzet CSV'}).click();
- expect((await waiting).suggestedFilename()).toBe('qunited-inzet.csv');
 });
