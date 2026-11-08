@@ -1,26 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { getAllAttachments } from './files';
-import { isoToday, shiftDays } from './alerts';
-import { coverWindow, coverRows, comingFree, occupancy, staffing, COVER_KINDS } from './cover';
+import { isoToday } from './alerts';
+import { coverWindow, coverRows, comingFree, occupancy, staffing } from './cover';
 import { collectActions, hasSourceData } from './actions';
 import { money, number, formatDate, formatDateLong, plural } from './format';
-import Chart from './Chart';
 import { StorageNotice, BackupReminder } from './StorageNotice';
+import useNarrow from './useNarrow';
 
 const VISIBLE_ACTIONS = 4;
 const VISIBLE_PROJECTS = 5;
 const VISIBLE_FREE = 5;
-
-function useNarrow() {
- const [narrow, setNarrow] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 860px)').matches);
- useEffect(() => {
-  const query = matchMedia('(max-width: 860px)');
-  const change = () => setNarrow(query.matches);
-  query.addEventListener('change', change);
-  return () => query.removeEventListener('change', change);
- }, []);
- return narrow;
-}
 
 /** Een kerncijfer dat doorklikt naar het overzicht waar het vandaan komt. */
 function Kpi({ label, value, note, href, onClick, testid, active }) {
@@ -36,7 +25,6 @@ function Kpi({ label, value, note, href, onClick, testid, active }) {
 export default function Dashboard({ data }) {
  const [certificates, setCertificates] = useState([]);
  const [fileError, setFileError] = useState('');
- const [offset, setOffset] = useState(0);
  const [onlyAvailable, setOnlyAvailable] = useState(false);
  const narrow = useNarrow();
 
@@ -46,8 +34,8 @@ export default function Dashboard({ data }) {
  }, []);
 
  const iso = isoToday();
- const length = narrow ? 7 : 28;
- const window = coverWindow(shiftDays(iso, offset * length), length, iso);
+ // Het venster loopt vanaf deze maandag; vandaag ligt erin, zodat "t/m" een echte datum is.
+ const window = coverWindow(iso, 183, iso);
  const rows = coverRows(data, window, iso, { onlyAvailable });
  const allRows = coverRows(data, window, iso);
 
@@ -118,52 +106,35 @@ export default function Dashboard({ data }) {
   </section>
 
   <div className="overview-grid">
-   <section className="panel" aria-label="Bezettingsplanning">
+   <section className="panel" aria-label="Vandaag">
     <header>
-     <h2>{narrow ? 'Wie staat waar' : 'Bezettingsplanning'}</h2>
-     {!narrow && <div className="period">
-      <button type="button" onClick={() => setOffset(value => value - 1)}>Vorige</button>
-      {offset !== 0 && <button type="button" onClick={() => setOffset(0)}>Vandaag</button>}
-      <button type="button" onClick={() => setOffset(value => value + 1)}>Volgende</button>
-     </div>}
+     <h2>Wie staat waar vandaag</h2>
+     <a className="card-link" href="#/planning">Hele planning bekijken</a>
     </header>
-    {!narrow && <p className="panel-period">
-     {formatDate(window.start)} tot en met {formatDate(window.end)}
-     {onlyAvailable && <> · <button type="button" className="text-action" onClick={() => setOnlyAvailable(false)}>toon alle medewerkers</button></>}
-    </p>}
+    {onlyAvailable && <p className="panel-period">Alleen wie vandaag niet ingezet is · <button type="button" className="text-action" onClick={() => setOnlyAvailable(false)}>toon alle medewerkers</button></p>}
     {allRows.length
      ? rows.length
-      ? narrow
-       ? <ul className="stack" aria-label="Wie staat waar">
-        {rows.map(row => {
-         const now = row.bars.find(bar => window.today !== null && bar.from <= window.today && bar.to >= window.today);
-         return <li key={row.id}>
-          <div className="stack-head">
-           <a href={row.href}>{row.label}</a>
-           <span className={`pill${row.state === 'beschikbaar' ? ' pos' : ''}`}>
-            {row.state === 'ingezet' ? 'Ingezet' : row.state === 'afwezig' ? 'Afwezig' : 'Beschikbaar'}
-           </span>
-          </div>
-          <p className="stack-sub">
-           {now
-            ? <>{now.label}{now.to < window.days.length ? <> tot <span className="num">{formatDate(window.days[now.to].iso)}</span></> : ''}</>
-            : row.sub || 'geen inzet gepland'}
-          </p>
-         </li>;
-        })}
-       </ul>
-       : <Chart
-       legend
-       label={`Bezetting van ${rows.length} medewerkers over ${window.days.length} dagen`}
-       deps={[JSON.stringify(rows), window.start, window.days.length]}
-       draw={(Charts, host, legendHost) => Charts.timeline(host, rows, COVER_KINDS, {
-        days: window.days, weekends: window.weekends, today: window.today, legend: legendHost, extras: false,
-        onSelect: (bar) => { if (bar.href) location.hash = bar.href.slice(1); },
+      ? <ul className="stack today-list" aria-label="Wie staat waar vandaag">
+       {rows.map(row => {
+        const now = row.bars.find(bar => window.today !== null && bar.from <= window.today && bar.to >= window.today);
+        const until = now && now.to < window.days.length ? window.days[now.to].iso : '';
+        return <li key={row.id}>
+         <div className="stack-head">
+          <span className="today-who"><a href={row.href}>{row.label}</a>{row.sub && <span className="sub">{row.sub}</span>}</span>
+          <span className={`pill${row.state === 'beschikbaar' ? ' pos' : ''}`}>
+           {row.state === 'ingezet' ? 'Ingezet' : row.state === 'afwezig' ? 'Afwezig' : 'Beschikbaar'}
+          </span>
+         </div>
+         <p className="stack-sub">
+          {now
+           ? <><a href={now.href}>{now.label}</a>{until && <> · t/m <span className="num">{formatDate(until)}</span></>}</>
+           : 'Geen inzet vandaag'}
+         </p>
+        </li>;
        })}
-      />
-      : <p className="empty-line">Geen medewerker voldoet aan dit filter.</p>
+      </ul>
+      : <p className="empty-line">Iedereen is vandaag ingezet.</p>
      : <p className="empty-line">Nog geen actieve medewerkers. <a href="#/personeel/nieuw">Medewerker toevoegen</a></p>}
-    {!!allRows.length && !narrow && <p className="kpi-note">Klik een balk om het project te openen.</p>}
    </section>
 
    <section className="panel" aria-label="Actiepunten">

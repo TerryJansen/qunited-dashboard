@@ -8,9 +8,12 @@ const data={...emptyData(),
  inzet:[{id:'i1',name:'Terry Jansen — IHC defense',status:'Gepland',employeeId:'e1',projectId:'p1',role:'Inspecteur',start:day(1),end:day(40),hoursPerWeek:'40',notes:''}],
  urenstaten:[{id:'t1',name:'Voorbereiding',status:'Concept',employeeId:'e1',projectId:'p1',date:day(-1),hours:'4'}]};
 
-test('a bar in the planning opens the project with its details',async({page})=>{
+test('a block in the planning opens the project with its details',async({page})=>{
  await seed(page,data);
- await page.locator('.chart g[role="button"]').filter({hasText:'IHC defense'}).first().click();
+ await page.goto('/#/planning');
+ // de inzet begint morgen; staat morgen in een volgende week, blader dan door
+ if(!await page.locator('.agenda-block').filter({hasText:'IHC defense'}).count())await page.getByRole('button',{name:'Volgende week'}).click();
+ await page.locator('.agenda-block').filter({hasText:'IHC defense'}).first().click();
  await expect(page.getByRole('heading',{name:'IHC defense',exact:true})).toBeVisible();
  // de gegevens die je op een projectpagina verwacht
  const gegevens=page.getByRole('region',{name:'Gegevens'}).or(page.locator('.detail-grid'));

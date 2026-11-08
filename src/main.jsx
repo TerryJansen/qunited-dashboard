@@ -8,6 +8,7 @@ import Reports from './Reports';
 import Dashboard from './Dashboard';
 import Backup from './Backup';
 import Assistant from './Assistant';
+import Planning from './Planning';
 import Login from './Login';
 import Logo from './Logo';
 import { signedIn, signOut } from './session';
@@ -19,7 +20,7 @@ import { formatHours, formatPause } from './TimeWheel';
 import { isoToday } from './alerts';
 import { requestPersistence } from './persist';
 
-const PAGES = { rapportages: 'Rapportages', backup: 'Back-up', hulp: 'Hulp' };
+const PAGES = { rapportages: 'Rapportages', planning: 'Planning', backup: 'Back-up', hulp: 'Hulp' };
 const titleOf = (key, record, data) => modules[key].derivedName ? modules[key].derivedName(record, data) : record.name;
 const sentence = items => items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} en ${items.at(-1)}`;
 const capitalise = text => text.charAt(0).toUpperCase() + text.slice(1);
@@ -28,7 +29,7 @@ const MAX_COLUMNS = 4;
 // Elf bestemmingen op één hoop is geen structuur; hier staan ze naar het soort werk.
 const NAV_GROUPS = [
  ['Overzicht', ['dashboard', 'rapportages']],
- ['Werk', ['projecten', 'inzet', 'urenstaten']],
+ ['Werk', ['projecten', 'inzet', 'planning', 'urenstaten']],
  ['Mensen', ['personeel', 'afwezigheid']],
  ['Middelen', ['materiaal', 'inventaris']],
  ['Administratie', ['facturatie', 'support', 'procedures']],
@@ -120,6 +121,7 @@ function App() {
       : page === 'rapportages' ? <Reports data={data} />
        : page === 'backup' ? <Backup data={data} onRestore={write} readOnly={!!initial.error} />
        : page === 'hulp' ? <Assistant data={data} />
+       : page === 'planning' ? <Planning data={data} />
         : modules[page] && action && action !== 'nieuw'
          ? <Detail key={`${page}/${action}`} id={page} recordId={action} data={data} save={records => write({ ...data, [page]: records })} />
          : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}

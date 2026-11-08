@@ -47,19 +47,22 @@ test('the title follows a renamed project instead of going stale',async({page})=
  await expect(row(page,'Ada — Project A2')).toBeVisible();
 });
 
-test('the cover timeline and the occupancy report separate busy from available staff',async({page})=>{
- const today=new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+test('today\'s list and the occupancy report separate busy from available staff',async({page})=>{
+ const todayText=new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
  await seed(page,{...base,inzet:[{id:'i1',name:'Ada — Project A',status:'Actief',employeeId:'e1',projectId:'p1',start:'2020-01-01',end:'2099-12-31'}]});
  await page.goto('/#/dashboard');
  await expect(page.getByTestId('deployed-count')).toContainText('1');
  await expect(page.getByTestId('available-count')).toHaveText('1');
- // de bezettingsbalk noemt beide medewerkers, met de vrije bovenaan
- const cover=page.getByLabel(/Bezetting van 2 medewerkers/);
- await expect(cover).toBeVisible();
- await expect(cover).toContainText('Bram');
- await expect(cover).toContainText('Ada');
+ // "wie staat waar vandaag" noemt beide medewerkers, met de vrije bovenaan
+ const today=page.getByRole('list',{name:'Wie staat waar vandaag'});
+ await expect(today.locator('li').first()).toContainText('Bram');
+ await expect(today.locator('li').first()).toContainText('Beschikbaar');
+ await expect(today.locator('li').filter({hasText:'Ada'})).toContainText('Project A');
+ // het filter op het kerncijfer laat alleen wie niet ingezet is staan
+ await page.getByRole('button',{name:/Beschikbaar vandaag/}).click();
+ await expect(today.locator('li')).toHaveCount(1);
  await navigate(page,'Rapportages');
- await expect(page.getByRole('heading',{name:`Bezetting vandaag (${today})`})).toBeVisible();
+ await expect(page.getByRole('heading',{name:`Bezetting vandaag (${todayText})`})).toBeVisible();
  const table=page.getByRole('table',{name:'Bezetting vandaag'});
  await expect(table.getByRole('row').filter({hasText:'Ada'})).toContainText('Project A');
  await expect(table.getByRole('row').filter({hasText:'Bram'})).toContainText('Beschikbaar');
