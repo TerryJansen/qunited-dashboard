@@ -4,8 +4,7 @@ import {emptyData} from '../src/modules.js';
 import {seed,openFiles,row} from './helpers.js';
 const seeded={...emptyData(),
  projecten:[{id:'p1',name:'Project A',status:'In uitvoering'}],
- personeel:[{id:'e1',name:'Ada',status:'Actief'}],
- facturatie:[{id:'f1',name:'F-1',client:'Klant',status:'Open',amount:'250'}]};
+ personeel:[{id:'e1',name:'Ada',status:'Actief'}]};
 
 const start=page=>seed(page,seeded);
 

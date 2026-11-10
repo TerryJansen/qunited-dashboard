@@ -1,7 +1,7 @@
 import { modules, reference, resolveReference } from './modules';
 import { isoToday, shiftDays } from './alerts';
 import { assignmentRuns, isWeekend, staffing } from './cover';
-import { formatDate, money } from './format';
+import { formatDate } from './format';
 
 const CERTIFICATE_HORIZON = 60;
 const TIMESHEET_LOOKBACK = 7;
@@ -28,7 +28,6 @@ export function dueText(date, iso) {
 
 // Datumvelden die aandacht vragen zodra ze verstrijken of binnen hun horizon vallen.
 const DATE_RULES = [
- { module: 'facturatie', field: 'due', horizon: 7, states: ['Open'], what: 'Factuur vervalt', overdueWhat: 'Factuur is vervallen', urgent: true },
  { module: 'projecten', field: 'due', horizon: 14, states: ['Planning', 'In uitvoering'], what: 'Project loopt af', overdueWhat: 'Einddatum project verstreken' },
  { module: 'inventaris', field: 'due', horizon: 30, states: ['Beschikbaar', 'In gebruik', 'Onderhoud'], what: 'Inspectie nodig', overdueWhat: 'Inspectie verlopen' },
  { module: 'materiaal', field: 'due', horizon: 14, states: ['Nodig'], what: 'Materiaal nodig', overdueWhat: 'Materiaal te laat' },
@@ -119,14 +118,14 @@ export function collectActions(data, certificates = [], iso = isoToday()) {
   });
  }
 
- // 5. Datumregels: vervallen facturen, aflopende projecten, inspecties, materiaal, procedures.
+ // 5. Datumregels: aflopende projecten, inspecties, materiaal, procedures.
  for (const rule of DATE_RULES) {
   for (const record of data[rule.module]) {
    const date = record[rule.field];
    if (!date || !rule.states.includes(record.status)) continue;
    const overdue = date < iso;
    if (!overdue && date > shiftDays(iso, rule.horizon)) continue;
-   const extra = rule.module === 'facturatie' ? ` · ${money(Number(record.amount))}` : '';
+   const extra = '';
    push({
     id: `${rule.module}-${record.id}`,
     urgency: overdue ? (rule.urgent ? 'hoog' : 'middel') : 'laag',
@@ -149,4 +148,4 @@ export function collectActions(data, certificates = [], iso = isoToday()) {
 
 /** Zijn er genoeg gegevens om iets zinnigs over actiepunten te zeggen? */
 export const hasSourceData = data =>
- !!(data.personeel.length || data.projecten.length || data.inzet.length || data.urenstaten.length || data.facturatie.length);
+ !!(data.personeel.length || data.projecten.length || data.inzet.length || data.urenstaten.length);

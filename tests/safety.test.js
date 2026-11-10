@@ -31,7 +31,7 @@ test('mobile navigation, the folded menu, the overview and history',async({page}
  await expect(page.getByLabel('Lopende en geplande projecten')).toContainText('Eigen project');
  await page.goBack();await expect(page.getByRole('heading',{name:'Projecten',exact:true})).toBeVisible();
  await page.goForward();await expect(page.getByRole('heading',{name:'Overzicht',exact:true})).toBeVisible();
- for(const name of ['Materiaal','Inventaris','Facturatie','IT & support','Procedures','Personeel']){
+ for(const name of ['Materiaal','Inventaris','IT & support','Procedures','Personeel']){
   await navigate(page,name);await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }

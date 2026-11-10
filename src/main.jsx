@@ -33,7 +33,7 @@ const NAV_GROUPS = [
  ['Werk', ['projecten', 'planning', 'urenstaten']],
  ['Mensen', ['personeel', 'afwezigheid']],
  ['Middelen', ['materiaal', 'inventaris']],
- ['Administratie', ['facturatie', 'support', 'procedures']],
+ ['Administratie', ['support', 'procedures']],
 ];
 const labelOf = key => key === 'dashboard' ? 'Dashboard' : PAGES[key] || modules[key].title;
 
@@ -46,7 +46,6 @@ function navigation() {
 /** Kleur alleen waar een beslissing nodig is; de rest van de statussen blijft neutraal. */
 function statusTone(id, record, iso) {
  if (['Afgerond', 'Betaald', 'Goedgekeurd', 'Opgelost'].includes(record.status)) return 'pos';
- if (id === 'facturatie' && record.status === 'Open' && record.due && record.due < iso) return 'neg';
  if (['Nodig', 'Onderhoud'].includes(record.status)) return 'warn';
  return '';
 }

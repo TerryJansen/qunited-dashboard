@@ -21,7 +21,6 @@ export const availableStaff = (data, iso = isoToday()) => data.personeel
 // Datumvelden die aandacht vragen: verstreken, of binnen de horizon van die module.
 const DATE_RULES = [
  { module: 'projecten', field: 'due', horizon: 14, states: ['Planning', 'In uitvoering'], label: 'einddatum' },
- { module: 'facturatie', field: 'due', horizon: 14, states: ['Open'], label: 'vervaldatum' },
  { module: 'inzet', field: 'end', horizon: 30, states: ['Gepland', 'Actief'], label: 'einde inzet' },
  { module: 'inventaris', field: 'due', horizon: 30, states: ['Beschikbaar', 'In gebruik', 'Onderhoud'], label: 'volgende inspectie' },
  { module: 'materiaal', field: 'due', horizon: 14, states: ['Nodig'], label: 'benodigd op' },

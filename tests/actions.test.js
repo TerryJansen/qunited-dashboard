@@ -14,8 +14,7 @@ test('an empty workspace says it has nothing to derive actions from',async({page
 test('data without open dates reports no actions rather than nothing to go on',async({page})=>{
  await seed(page,{...emptyData(),
   personeel:[{id:'e1',name:'Ada',status:'Actief'}],
-  projecten:[{id:'p1',name:'Ver weg',status:'Planning',due:day(400)}],
-  facturatie:[{id:'f1',name:'F1',client:'K',status:'Betaald',amount:'10',due:day(-40)}]});
+  projecten:[{id:'p1',name:'Ver weg',status:'Planning',due:day(400)}]});
  await expect(page.getByTestId('actions-empty')).toBeVisible();
  await expect(page.getByTestId('actions-unknown')).toHaveCount(0);
 });
@@ -24,20 +23,20 @@ test('actions are concrete, sorted by urgency and link to the right screen',asyn
  await seed(page,{...emptyData(),
   personeel:[{id:'e1',name:'Ada',status:'Actief'}],
   projecten:[{id:'p1',name:'Laat project',status:'In uitvoering',due:day(-3)},{id:'p2',name:'Bijna klaar',status:'Planning',due:day(7),start:day(2),needed:'3'}],
-  facturatie:[{id:'f1',name:'F-100',client:'Klant',status:'Open',amount:'500',due:day(-10)}],
   urenstaten:[{id:'t1',name:'Werk',status:'Ingediend',employeeId:'e1',projectId:'p1',date:day(-5),hours:'8'}],
   inventaris:[{id:'v1',name:'Kraan',status:'In gebruik',due:day(12)}]});
  const actions=page.locator('.action');
- await expect(actions.first()).toContainText('Factuur is vervallen');
- await expect(actions.first()).toContainText('10 dagen te laat');
- await expect(actions.first()).toHaveClass(/action-hoog/);
+ const late=actions.filter({hasText:'Laat project'}).first();
+ await expect(late).toContainText('3 dagen te laat');
  // de personeelsbehoefte van project p2 is onvervuld en wordt genoemd met aantallen
  await expect(page.getByLabel('Actiepunten')).toContainText('3 van de 3 plekken nog niet ingevuld');
  await expect(page.getByLabel('Actiepunten')).toContainText('urenstaat wacht op beoordeling');
- await actions.filter({hasText:'F-100'}).click();
- // het actiepunt opent de factuur zelf, niet alleen de lijst
- await expect(page.getByRole('heading',{name:'F-100',exact:true})).toBeVisible();
- await expect(page.locator('.crumbs').getByRole('link',{name:'Facturatie'})).toBeVisible();
+ // geen facturen meer in de actielijst
+ await expect(page.getByLabel('Actiepunten')).not.toContainText('Factuur');
+ await late.click();
+ // het actiepunt opent het project zelf, niet alleen de lijst
+ await expect(page.getByRole('heading',{name:'Laat project',exact:true})).toBeVisible();
+ await expect(page.locator('.crumbs').getByRole('link',{name:'Projecten'})).toBeVisible();
 });
 
 test('a missing timesheet on a worked day becomes an action',async({page})=>{

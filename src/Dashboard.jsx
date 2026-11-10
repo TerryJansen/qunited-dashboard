@@ -45,10 +45,8 @@ export default function Dashboard({ data }) {
  const free = comingFree(data, iso);
 
  const submitted = data.urenstaten.filter(sheet => sheet.status === 'Ingediend');
- const openInvoices = data.facturatie.filter(invoice => invoice.status === 'Open');
- const openTotal = openInvoices.reduce((sum, invoice) => sum + Math.round(Number(invoice.amount) * 100), 0) / 100;
- const lateInvoices = openInvoices.filter(invoice => invoice.due && invoice.due < iso);
- const lateTotal = lateInvoices.reduce((sum, invoice) => sum + Math.round(Number(invoice.amount) * 100), 0) / 100;
+ const running = data.projecten.filter(project => project.status === 'In uitvoering');
+ const starting = data.projecten.filter(project => project.status === 'Planning');
 
  const projects = data.projecten
   .filter(project => ['Planning', 'In uitvoering'].includes(project.status))
@@ -100,9 +98,9 @@ export default function Dashboard({ data }) {
     value={number(submitted.length)}
     note={submitted.length ? 'status Ingediend' : 'niets in behandeling'} />
    <Kpi
-    label="Openstaande facturen" testid="invoice-total" href="#/facturatie?status=Open"
-    value={money(openTotal)}
-    note={lateInvoices.length ? `${plural(lateInvoices.length, 'factuur', 'facturen')} vervallen · ${money(lateTotal)}` : 'niets vervallen'} />
+    label="Lopende projecten" testid="project-count" href="#/projecten?status=In uitvoering"
+    value={number(running.length)}
+    note={starting.length ? `${plural(starting.length, 'project', 'projecten')} in planning` : 'niets in planning'} />
   </section>
 
   <div className="overview-grid">

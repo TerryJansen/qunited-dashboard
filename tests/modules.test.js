@@ -1,12 +1,11 @@
 import {test,expect} from '@playwright/test';
 import {row,statusTab} from './helpers.js';
-const cases=[['projecten','Projecten','Projectnaam'],['materiaal','Materiaal','Omschrijving'],['inventaris','Inventaris','Itemnaam'],['facturatie','Facturatie','Factuurnummer'],['support','IT & support','Onderwerp'],['procedures','Procedures','Titel'],['personeel','Personeel','Naam']];
+const cases=[['projecten','Projecten','Projectnaam'],['materiaal','Materiaal','Omschrijving'],['inventaris','Inventaris','Itemnaam'],['support','IT & support','Onderwerp'],['procedures','Procedures','Titel'],['personeel','Personeel','Naam']];
 for(const [route,title,label] of cases)test(`${title}: CRUD, search, filter, persistence`,async({page})=>{
  await page.goto(`/#/${route}`);
  await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Toevoegen',exact:true}).click();
  await page.getByLabel(label,{exact:true}).fill('Test registratie');
- if(route==='facturatie'){await page.getByLabel('Relatie',{exact:true}).fill('Test klant');await page.getByLabel('Bedrag (€)').fill('123.45');}
  if(route==='projecten')await page.getByLabel('Locatie',{exact:true}).fill('Rotterdam');
  if(route==='procedures')await page.getByLabel('Inhoud').fill('Eigen documenttekst.');
  await page.getByRole('button',{name:'Opslaan',exact:true}).click();

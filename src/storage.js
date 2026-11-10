@@ -63,6 +63,15 @@ export function readData() {
  }
 }
 
+// Onderdelen die uit de app zijn gehaald. Wat er in de browser van stond, blijft daar bewaard en
+// wordt bij het opslaan meegenomen: weghalen uit het menu is geen wissen.
+export const RETIRED = ['facturatie'];
+
 export function writeData(data) {
- localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+ let kept = {};
+ try {
+  const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  for (const key of RETIRED) if (stored && Array.isArray(stored[key]) && stored[key].length) kept[key] = stored[key];
+ } catch { kept = {}; }
+ localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, ...kept }));
 }

@@ -9,7 +9,7 @@ scherm staan, want die klopt.
 
 | Wat | Waar | Sleutel |
 | --- | --- | --- |
-| Alle tekstgegevens (projecten, inzet, urenstaten, personeel, afwezigheid, materiaal, inventaris, facturatie, support, procedures) | `localStorage` van de browser | `qunited.records.v1` |
+| Alle tekstgegevens (projecten, inzet, urenstaten, personeel, afwezigheid, materiaal, inventaris, support, procedures; en facturen van vóór het weghalen van Facturatie, die ongemoeid blijven staan) | `localStorage` van de browser | `qunited.records.v1` |
 | Cv's en certificaten | `IndexedDB`, als blob | database `qunited-files`, store `files` |
 
 Gevolgen, zonder omhaal:
