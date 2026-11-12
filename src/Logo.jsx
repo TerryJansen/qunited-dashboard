@@ -11,7 +11,7 @@ function Mark({ ring, core }) {
 
 /** Het volledige logo. `tone="light"` voor op het donkerblauw. */
 export default function Logo({ tone = 'dark', className, title = 'Qunited' }) {
- const ring = tone === 'light' ? CREAM : NAVY;
+ const ring = tone === 'light' ? CREAM : tone === 'current' ? 'currentColor' : NAVY;
  return <svg className={className} viewBox="1.80 6.10 194.62 55.8" role="img" aria-label={title}>
   <Mark ring={ring} core={LIME} />
   <path fill={ring} d={WORD} />

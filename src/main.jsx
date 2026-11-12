@@ -59,6 +59,12 @@ function App() {
  const [hash, setHash] = useState(() => location.hash.slice(2));
  const [menuOpen, setMenuOpen] = useState(false);
  const [inside, setInside] = useState(signedIn);
+ // Donker is de standaard; de keuze wordt in deze browser onthouden. De inlogpagina houdt haar eigen kleuren.
+ const [theme, setTheme] = useState(() => { try { return localStorage.getItem('qunited.theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } });
+ useEffect(() => {
+  if (inside) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('qunited.theme', theme); } catch { /* dan geldt de keuze alleen nu */ }
+ }, [theme, inside]);
 
  useEffect(() => {
   const change = () => { setHash(location.hash.slice(2)); setMenuOpen(false); };
@@ -89,7 +95,7 @@ function App() {
  return <div className="app-shell">
   <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="hoofdmenu">
    <a className="brand" href="#/dashboard" aria-label="Qunited, naar het dashboard">
-    <Logo className="brand-logo" title="Qunited" />
+    <Logo tone="current" className="brand-logo" title="Qunited" />
    </a>
    <nav aria-label="Hoofdnavigatie">
     {navigation().map(([group, keys]) => <React.Fragment key={group}>
@@ -110,11 +116,16 @@ function App() {
    <header className="topbar">
     <span className="scope">
      <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="hoofdmenu" onClick={() => setMenuOpen(open => !open)}>Menu</button>
-     <a className="topbar-logo" href="#/dashboard" aria-label="Qunited, naar het dashboard"><Logo className="brand-logo" /></a>
+     <a className="topbar-logo" href="#/dashboard" aria-label="Qunited, naar het dashboard"><Logo tone="current" className="brand-logo" /></a>
      <b className="scope-name">Werkruimte</b>
      <span className="long">alleen opgeslagen in deze browser</span>
     </span>
-    <span>{vandaag}</span>
+    <span className="topbar-side">
+     <span className="date">{vandaag}</span>
+     <button type="button" className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+      <Icon name={theme === 'dark' ? 'zon' : 'maan'} /><span>{theme === 'dark' ? 'Licht' : 'Donker'}</span>
+     </button>
+    </span>
    </header>
    <div className="sheet">
     <div className="canvas">
@@ -250,7 +261,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
    </table></div>;
 
  // Urenstaten per dag: bovenaan het totaal en de verdeling over de projecten, daaronder de regels.
- const TINTS = ['var(--lime)', 'var(--chart-2)', 'var(--navy)'];
+ const TINTS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)'];
  const days = id === 'urenstaten' ? [...new Set(shown.map(record => record.date || ''))].sort().reverse().map(date => {
   const rows = shown.filter(record => (record.date || '') === date);
   const perProject = new Map();

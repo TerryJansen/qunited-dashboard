@@ -3,6 +3,7 @@ import { getAllAttachments } from './files';
 import { isoToday, shiftDays } from './alerts';
 import { weekHours, mondayOf, formatDuration, change } from './hours';
 import Icon from './Icon';
+import { weekNumber } from './agenda';
 import { coverWindow, coverRows, occupancy, staffing } from './cover';
 import { collectActions, hasSourceData } from './actions';
 import { number, formatDate, plural } from './format';
@@ -12,7 +13,16 @@ import useNarrow from './useNarrow';
 const VISIBLE_ACTIONS = 4;
 const VISIBLE_PROJECTS = 3;
 
-const SERIES = ['var(--lime)', 'var(--chart-2)', 'var(--navy)'];
+const SERIES = ['var(--chart-1)', 'var(--chart-3)', 'var(--chart-2)'];
+
+/** "38u 36min" met het getal groot en de eenheid klein. De tekst zelf blijft gelijk. */
+function Dur({ minutes }) {
+ return formatDuration(minutes).split(' ').map((part, index) => {
+  const [, n, unit] = part.match(/^(\d+)(\D+)$/) || [null, part, ''];
+  return <React.Fragment key={index}>{index > 0 && ' '}{n}<small>{unit}</small></React.Fragment>;
+ });
+}
+
 
 /** Eén kaart: kop met pictogram, titel en uitleg, de inhoud, en onderaan één link naar het hele scherm. */
 function Card({ icon, title, sub, control, footer, label, className = '', children }) {
@@ -49,7 +59,7 @@ function HoursCard({ data, iso }) {
   </div>}
   footer={{ href: '#/urenstaten', label: 'Bekijk de urenstaten' }}>
   <p className="big-figure">
-   <b data-testid="hours-total">{formatDuration(week.total)}</b>
+   <b data-testid="hours-total"><Dur minutes={week.total} /></b>
    {diff !== null && <span className={diff < 0 ? 'down' : 'up'}>{diff < 0 ? '↓' : '↑'} {Math.abs(diff)}% <i>t.o.v. de week ervoor</i></span>}
   </p>
   {week.total
@@ -76,6 +86,36 @@ function HoursCard({ data, iso }) {
  </Card>;
 }
 
+/** Uren per week over de laatste acht weken, als trap: zo zie je in één oogopslag of het drukker of rustiger wordt. */
+function WeeksCard({ data, iso }) {
+ const monday = mondayOf(iso);
+ const weeks = Array.from({ length: 8 }, (_, i) => {
+  const start = shiftDays(monday, (i - 7) * 7);
+  return { start, minutes: weekHours(data, start, iso).total, label: `wk ${weekNumber(start)}` };
+ });
+ const total = weeks.reduce((sum, week) => sum + week.minutes, 0);
+ const max = Math.max(...weeks.map(week => week.minutes));
+ const W = 640, H = 210, base = 180, step = W / weeks.length;
+ const y = minutes => base - (max ? minutes / max : 0) * 150;
+ const line = weeks.map((week, i) => `${i ? 'L' : 'M'}${i * step} ${y(week.minutes)}H${(i + 1) * step}`).join('');
+ return <Card icon="trend" title="Uren per week" sub="De laatste acht weken naast elkaar" label="Uren per week"
+  footer={{ href: '#/urenstaten', label: 'Bekijk de urenstaten' }}>
+  <p className="big-figure"><b><Dur minutes={total} /></b><span><i>in acht weken</i></span></p>
+  {total
+   ? <svg className="steps-chart" viewBox={`0 0 ${W} ${H}`} role="img"
+    aria-label={weeks.map(week => `${week.label}: ${week.minutes ? formatDuration(week.minutes) : 'geen uren'}`).join(', ')}>
+    <defs><linearGradient id="steps-fill" x1="0" y1="0" x2="0" y2="1">
+     <stop offset="0" stopColor="var(--brand)" stopOpacity="0.42" /><stop offset="1" stopColor="var(--brand)" stopOpacity="0.02" />
+    </linearGradient></defs>
+    {weeks.map((week, i) => <line key={week.start} className="guide" x1={(i + 0.5) * step} x2={(i + 0.5) * step} y1="8" y2={base} />)}
+    <path d={`${line}V${base}H0Z`} fill="url(#steps-fill)" />
+    {weeks.map((week, i) => week.minutes > 0 && <line key={week.start} className="top" x1={i * step + 1} x2={(i + 1) * step - 1} y1={y(week.minutes)} y2={y(week.minutes)} />)}
+    {weeks.map((week, i) => <text key={week.start} x={(i + 0.5) * step} y={H - 8} textAnchor="middle">{week.label}</text>)}
+   </svg>
+   : <p className="empty-line">In de laatste acht weken zijn er geen uren geschreven.</p>}
+ </Card>;
+}
+
 /** Drie ringen: ingezet, afwezig en beschikbaar, elk als deel van alle actieve medewerkers. */
 function Rings({ parts, total }) {
  return <svg className="rings" viewBox="0 0 120 120" role="img" aria-label={parts.map(part => `${part.label} ${part.value} van ${total}`).join(', ')}>
@@ -92,8 +132,8 @@ function Rings({ parts, total }) {
 
 /** Voortgang als rij streepjes: gevuld tot waar het project nu is. */
 function Ticks({ share, label }) {
- const filled = Math.round(Math.max(0, Math.min(1, share)) * 36);
- return <span className="ticks" role="img" aria-label={label}>{Array.from({ length: 36 }, (_, i) => <i key={i} className={i < filled ? 'on' : ''} />)}</span>;
+ const filled = Math.round(Math.max(0, Math.min(1, share)) * 44);
+ return <span className="ticks" role="img" aria-label={label}>{Array.from({ length: 44 }, (_, i) => <i key={i} className={i < filled ? 'on' : ''} />)}</span>;
 }
 
 export default function Dashboard({ data }) {
@@ -121,7 +161,7 @@ export default function Dashboard({ data }) {
  const sheetStates = [
   { name: 'Concept', label: 'Concept', count: count('Concept'), color: 'var(--chart-muted)' },
   { name: 'Ingediend', label: 'Te beoordelen', count: count('Ingediend'), color: 'var(--chart-2)' },
-  { name: 'Goedgekeurd', label: 'Goedgekeurd', count: count('Goedgekeurd'), color: 'var(--lime)' },
+  { name: 'Goedgekeurd', label: 'Goedgekeurd', count: count('Goedgekeurd'), color: 'var(--chart-3)' },
  ];
  const running = data.projecten.filter(project => project.status === 'In uitvoering');
  const starting = data.projecten.filter(project => project.status === 'Planning');
@@ -163,6 +203,7 @@ export default function Dashboard({ data }) {
   <div className="dash">
    <div className="dash-main">
     <HoursCard data={data} iso={iso} />
+    <WeeksCard data={data} iso={iso} />
 
     <div className="dash-pair">
     <Card icon="mensen" title="Wie staat waar vandaag" sub="Per medewerker het project en tot wanneer" label="Vandaag"
@@ -207,7 +248,10 @@ export default function Dashboard({ data }) {
          ? (Date.parse(iso) - Date.parse(project.start)) / (Date.parse(project.due) - Date.parse(project.start)) : null;
         return <li key={project.id}>
          <div className="project-head"><a href={`#/projecten/${project.id}`}>{project.name}</a><span className={project.status === 'In uitvoering' ? 'state on' : 'state'}>{project.status}</span></div>
-         {span !== null && <Ticks share={span} label={`${Math.round(Math.max(0, Math.min(1, span)) * 100)}% van de looptijd voorbij`} />}
+         {span !== null && <div className="progress-row">
+          <Ticks share={span} label={`${Math.round(Math.max(0, Math.min(1, span)) * 100)}% van de looptijd voorbij`} />
+          {span > 0 && <span className="progress-badge" aria-hidden="true">{Math.round(Math.max(0, Math.min(1, span)) * 100)}% voorbij</span>}
+         </div>}
          <p>
           {project.due ? <>tot <span className="num">{formatDate(project.due)}</span> · </> : ''}
           <span className={short ? 'shortfall' : ''}>{needed === null ? `${number(filled)} ingezet` : `${number(filled)} / ${number(needed)} bezet`}</span>
@@ -227,14 +271,14 @@ export default function Dashboard({ data }) {
      footer={{ href: '#/planning', label: 'Bekijk de planning' }}>
      <div className="activity">
       <dl>
-       <div style={{ '--mark': 'var(--lime)' }}><dt>Ingezet</dt><dd><b data-testid="deployed-count">{number(deployed.length)}</b><span>/{number(active.length)}</span></dd></div>
+       <div style={{ '--mark': 'var(--chart-1)' }}><dt>Ingezet</dt><dd><b data-testid="deployed-count">{number(deployed.length)}</b><span>/{number(active.length)}</span></dd></div>
        <div style={{ '--mark': 'var(--chart-2)' }}><dt>Afwezig</dt><dd><b>{number(absent.length)}</b><span>/{number(active.length)}</span></dd></div>
-       <div style={{ '--mark': 'var(--navy)' }}><dt>Beschikbaar</dt><dd><b data-testid="available-count">{number(available.length)}</b><span>/{number(active.length)}</span></dd></div>
+       <div style={{ '--mark': 'var(--chart-3)' }}><dt>Beschikbaar</dt><dd><b data-testid="available-count">{number(available.length)}</b><span>/{number(active.length)}</span></dd></div>
       </dl>
       <Rings total={active.length} parts={[
-       { label: 'Ingezet', value: deployed.length, color: 'var(--lime)' },
+       { label: 'Ingezet', value: deployed.length, color: 'var(--chart-1)' },
        { label: 'Afwezig', value: absent.length, color: 'var(--chart-2)' },
-       { label: 'Beschikbaar', value: available.length, color: 'var(--navy)' },
+       { label: 'Beschikbaar', value: available.length, color: 'var(--chart-3)' },
       ]} />
      </div>
      <p className="card-note">{absent.length ? `${plural(absent.length, 'medewerker', 'medewerkers')} afwezig` : 'Niemand afwezig'}</p>
