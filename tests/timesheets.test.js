@@ -102,3 +102,46 @@ test('time is set to the minute: 7:37 worked with 37 minutes pause typed in',asy
  expect(Math.round(Number(stored.hours)*60)).toBe(457);
  expect(stored.pause).toBe('37');
 });
+
+test('the week overview adds up per status and kind, compares with contract hours, and exports',async({page})=>{
+ await seed(page,{...emptyData(),
+  projecten:[{id:'p1',name:'Project A',status:'In uitvoering'}],
+  personeel:[{id:'e1',name:'Ada',number:'400428',contractHours:'40',status:'Actief'},{id:'e2',name:'Bram',status:'Actief'},{id:'e3',name:'Oud',status:'Inactief'}],
+  urenstaten:[
+   {id:'t1',name:'Maandag',status:'Goedgekeurd',employeeId:'e1',projectId:'p1',date:'2026-11-02',hours:'32',pause:'30',kind:'Indirect'},
+   {id:'t2',name:'Dinsdag',status:'Afgekeurd',employeeId:'e1',projectId:'p1',date:'2026-11-03',hours:'8',pause:'30',kind:'Facturabel'},
+   {id:'t3',name:'Andere week',status:'Concept',employeeId:'e1',projectId:'p1',date:'2026-11-10',hours:'5',pause:'0'},
+  ]});
+ await page.goto('/#/urenstaten?week=2026-11-04');
+ await expect(page.getByRole('group',{name:'Kies een week'})).toContainText('02-11-2026 - 08-11-2026 (45)');
+ const overview=page.getByRole('table',{name:'Uren per medewerker'});
+ const rows=overview.locator('tbody').getByRole('row');
+ await expect(rows).toHaveCount(2);
+ const ada=rows.filter({hasText:'Ada'});
+ await expect(ada.getByRole('cell')).toHaveText(['400428','Ada','00:00','00:00','32:00','08:00','08:00','32:00','20%','40:00 / 40:00']);
+ await expect(rows.filter({hasText:'Bram'}).getByTestId('week-total')).toHaveText('00:00');
+ await expect(page.getByText('Toont 1 tot 2 van 2 rijen')).toBeVisible();
+ // klik op de naam: alleen de regels van die medewerker
+ await rows.filter({hasText:'Bram'}).getByRole('button',{name:'Bram'}).click();
+ await expect(page.getByText('Deze medewerker heeft in deze week geen uren geschreven.')).toBeVisible();
+ await ada.getByRole('button',{name:'Ada'}).click();
+ await expect(row(page,'Maandag')).toBeVisible();
+ await expect(row(page,'Andere week')).toHaveCount(0);
+ // zoeken en sorteren
+ await page.getByLabel('Zoek medewerker').fill('bram');
+ await expect(rows).toHaveCount(1);
+ await page.getByLabel('Zoek medewerker').fill('');
+ await overview.getByRole('button',{name:'Aantal uur'}).click();
+ await expect(rows.first()).toContainText('Bram');
+ // de week blijft staan na verversen, en de export bevat wat op het scherm staat
+ await page.getByRole('button',{name:'Volgende week'}).click();
+ await page.reload();
+ await expect(page.getByRole('group',{name:'Kies een week'})).toContainText('(46)');
+ await expect(rows.filter({hasText:'Ada'}).getByRole('cell').nth(2)).toHaveText('05:00');
+ const downloadPromise=page.waitForEvent('download');
+ await page.getByRole('button',{name:'Exporteren'}).click();
+ const download=await downloadPromise;
+ expect(download.suggestedFilename()).toBe('urenstaten-week-46-2026.csv');
+ const {readFileSync}=await import('node:fs');
+ expect(readFileSync(await download.path(),'utf8')).toContain('"400428";"Ada";"05:00"');
+});

@@ -1143,3 +1143,77 @@ input, select, textarea { color: var(--text); background: var(--surface); }
 .agenda-block.is-actief .sub, .agenda-block.is-actief small { color: inherit; }
 :root[data-theme="dark"] .card, :root[data-theme="dark"] .panel { border-color: var(--border); }
 @media (max-width: 860px) { .steps-chart text { font-size: 21px; } }
+
+/* ---------- urenstaten: weekkiezer en weekoverzicht per medewerker ---------- */
+.week-picker { display: flex; justify-content: center; margin: 0 0 16px; }
+.week-picker > * { display: inline-flex; align-items: center; justify-content: center; height: 42px; min-height: 42px; padding: 0 16px; margin-left: -1px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); font-size: 15px; }
+.week-picker > :first-child { margin-left: 0; border-radius: 10px 0 0 10px; padding: 0 12px; }
+.week-picker > :last-child { border-radius: 0 10px 10px 0; padding: 0 12px; }
+.week-picker button:hover { background: var(--raised); }
+.week-picker button[aria-pressed="true"] { font-weight: 600; }
+.week-range { font-variant-numeric: tabular-nums; white-space: nowrap; gap: 6px; }
+.week-range span { color: var(--muted); }
+
+.week-card { padding: 16px 18px 14px; margin-bottom: 22px; border-top: 3px solid var(--brand); }
+.week-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 8px; }
+.week-tools label { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--text); font-size: var(--fs-body); }
+.week-tools select { width: auto; margin: 0; }
+.week-tools input[type="search"] { width: 200px; margin: 0; }
+.week-tools-right { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.week-table th { white-space: nowrap; }
+.week-table th .sort { display: inline-flex; align-items: center; gap: 8px; min-height: 0; height: auto; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.week-table th .sort i { width: 0; height: 0; border: 4px solid transparent; border-bottom-color: var(--control); border-top: 0; }
+.week-table th[aria-sort="ascending"] .sort i { border-bottom-color: var(--text); }
+.week-table th[aria-sort="descending"] .sort i { border-bottom: 0; border-top: 5px solid var(--text); }
+.week-table td { font-size: 15px; }
+.week-table td.zero, .week-table .zero { color: var(--faint); }
+.week-table tr.is-picked td { background: var(--selected-bg); }
+.week-table tfoot td { font-weight: 600; border-top: 1px solid var(--border); border-bottom: 0; padding-top: 14px; font-size: var(--fs-body); }
+.week-name { font-weight: 600; text-align: left; }
+.pill.solid { height: 26px; padding: 0 12px; font-size: 13px; font-weight: 600; }
+.pill.solid.pos { background: var(--positive); color: var(--surface); }
+.pill.solid.neg { background: var(--negative); color: var(--surface); }
+.pill.solid.warn { background: var(--warning); color: var(--surface); }
+.week-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: var(--muted); font-size: var(--fs-body); }
+.pager { display: inline-flex; }
+.pager button { margin-left: -1px; border-radius: 0; min-width: 38px; }
+.pager button:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.pager button:last-child { border-radius: 0 8px 8px 0; }
+.pager button[aria-current] { background: var(--raised); font-weight: 600; }
+.week-lines { margin: 0 0 12px; font-family: var(--font-head); font-size: 16px; font-weight: 500; }
+.sheet:has(.week-card) { background: var(--raised); }
+:root[data-theme="dark"] .sheet:has(.week-card) { background: #0d0d0f; }
+@media (max-width: 860px) {
+ .week-picker > * { height: 46px; min-height: 46px; padding: 0 10px; font-size: 14px; }
+ .week-picker { justify-content: stretch; }
+ .week-range { flex: 1; }
+ .week-card { padding: 14px; }
+ .week-tools input[type="search"] { width: 150px; }
+ /* per medewerker een blokje in plaats van een brede tabel */
+ .week-card .table-wrap { overflow: visible; }
+ .week-table, .week-table tbody { display: block; }
+ .week-table thead, .week-table tfoot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+ .week-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+ .week-table tbody td { display: block; padding: 0; border: 0; text-align: left; height: auto; }
+ .week-table tbody td:nth-child(2) { grid-column: 1 / -1; grid-row: 1; font-size: 17px; }
+ .week-table tbody td:nth-child(1) { display: none; }
+ .week-table tbody td::before { display: block; color: var(--muted); font-size: 12px; font-family: var(--font); }
+ .week-table tbody td:nth-child(3)::before { content: "Concept"; }
+ .week-table tbody td:nth-child(4)::before { content: "Ingediend"; }
+ .week-table tbody td:nth-child(5)::before { content: "Goedgekeurd"; }
+ .week-table tbody td:nth-child(6)::before { content: "Afgekeurd"; }
+ .week-table tbody td:nth-child(7)::before { content: "Facturabel"; }
+ .week-table tbody td:nth-child(8)::before { content: "Indirect"; }
+ .week-table tbody td:nth-child(9)::before { content: "% Facturabel"; margin-bottom: 3px; }
+ .week-table tbody td:nth-child(10)::before { content: "Aantal uur"; margin-bottom: 3px; }
+}
+@media (max-width: 860px) {
+ .week-picker { flex-wrap: wrap; gap: 8px; }
+ .week-picker > * { margin: 0; border-radius: 10px; }
+ .week-picker > :first-child, .week-picker > :last-child { border-radius: 10px; flex: 0 0 52px; }
+ .week-range { order: -1; flex: 1 1 100%; font-weight: 600; }
+ .week-picker button[aria-pressed] { flex: 1; }
+ .week-tools-right { width: 100%; flex-wrap: nowrap; }
+ .week-tools-right label { flex: 1; min-width: 0; }
+ .week-tools input[type="search"] { width: 100%; min-width: 0; }
+}

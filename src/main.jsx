@@ -17,8 +17,10 @@ import Attachments, { getAttachments } from './Attachments';
 import { getProjectDocuments } from './files';
 import Detail from './Detail';
 import RecordForm from './RecordForm';
-import { money, formatDate, formatDateLong, plural, number } from './format';
-import { formatDuration } from './hours';
+import { money, formatDate, plural, number } from './format';
+import { mondayOf } from './hours';
+import { weekNumber } from './agenda';
+import { WeekPicker, WeekOverview, inWeek } from './Timesheets';
 import { formatHours, formatPause } from './TimeWheel';
 import { isoToday } from './alerts';
 import { requestPersistence } from './persist';
@@ -49,6 +51,7 @@ function navigation() {
 function statusTone(id, record, iso) {
  if (['Afgerond', 'Betaald', 'Goedgekeurd', 'Opgelost'].includes(record.status)) return 'pos';
  if (['Nodig', 'Onderhoud'].includes(record.status)) return 'warn';
+ if (record.status === 'Afgekeurd') return 'neg';
  return '';
 }
 
@@ -138,7 +141,7 @@ function App() {
         : modules[page] && action && action !== 'nieuw'
          ? <Detail key={`${page}/${action}`} id={page} recordId={action} data={data} save={records => write({ ...data, [page]: records })} />
          : modules[page] ? <Module key={`${page}?${search || ''}`} id={page} data={data} records={data[page]}
-          openNew={action === 'nieuw'} fromStatus={params.get('status') || ''} fromQuery={params.get('zoek') || ''}
+          openNew={action === 'nieuw'} fromStatus={params.get('status') || ''} fromQuery={params.get('zoek') || ''} fromWeek={params.get('week') || ''}
           save={records => write({ ...data, [page]: records })} />
          : <><h1>Pagina niet gevonden</h1><p className="muted"><a href="#/dashboard">Naar dashboard</a></p></>}
     </div>
@@ -147,7 +150,7 @@ function App() {
  </div>;
 }
 
-function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery = '' }) {
+function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery = '', fromWeek = '' }) {
  const m = modules[id];
  const iso = isoToday();
  const [query, setQuery] = useState(fromQuery);
@@ -156,13 +159,24 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  const [draft, setDraft] = useState(() => openNew ? blank() : null);
  const [deleteError, setDeleteError] = useState('');
  const [openFiles, setOpenFiles] = useState('');
+ // Urenstaten bekijk je per week. Kom je via een status binnen, dan opent de laatste week waarin die status voorkomt.
+ const weekly = id === 'urenstaten';
+ const [week, setWeekState] = useState(() => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fromWeek)) return mondayOf(fromWeek);
+  const latest = fromStatus && records.filter(record => record.status === fromStatus && record.date).map(record => record.date).sort().pop();
+  return mondayOf(latest || iso);
+ });
+ const [person, setPerson] = useState('');
+ // De gekozen week staat in het adres, zodat hij na verversen blijft staan.
+ const setWeek = monday => { setWeekState(monday); history.replaceState(null, '', `#/urenstaten?week=${monday}`); };
+ const scope = weekly ? records.filter(record => inWeek(record, week) && (!person || (record.employeeId || '') === person)) : records;
 
  // Modules waarnaar deze module verwijst en die nog leeg zijn: zonder die gegevens valt er niets te kiezen.
  const missing = [...new Set(m.fields.filter(field => field.source && field.required).map(field => field.source))].filter(source => !data[source].length);
  // Velden die de rijtitel al noemt horen niet nog eens in een kolom.
  const hidden = new Set(['name', ...(m.titleFields || []), m.subField].filter(Boolean));
 
- const shown = records.filter(record => (!status || record.status === status) && [
+ const shown = scope.filter(record => (!status || record.status === status) && [
   ...Object.values(record),
   ...m.fields.filter(field => field.source).map(field => data[field.source].find(x => x.id === record[field.key])?.name || ''),
  ].join(' ').toLocaleLowerCase().includes(query.toLocaleLowerCase().trim()));
@@ -260,22 +274,6 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
     </tbody>
    </table></div>;
 
- // Urenstaten per dag: bovenaan het totaal en de verdeling over de projecten, daaronder de regels.
- const TINTS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)'];
- const days = id === 'urenstaten' ? [...new Set(shown.map(record => record.date || ''))].sort().reverse().map(date => {
-  const rows = shown.filter(record => (record.date || '') === date);
-  const perProject = new Map();
-  for (const record of rows) perProject.set(record.projectId || '', (perProject.get(record.projectId || '') || 0) + Math.round(Number(record.hours) * 60 || 0));
-  const parts = [...perProject].filter(([, minutes]) => minutes > 0).sort((x, y) => y[1] - x[1])
-   .map(([projectId, minutes]) => ({ projectId, minutes, name: data.projecten.find(project => project.id === projectId)?.name || 'Zonder project' }));
-  return { date, rows, parts, total: parts.reduce((sum, part) => sum + part.minutes, 0),
-   pause: rows.reduce((sum, record) => sum + (Number(record.pause) || 0), 0) };
- }) : [];
- const tintOf = (() => {
-  const order = [...new Set(days.flatMap(day => day.parts.map(part => part.projectId)))];
-  return projectId => TINTS[order.indexOf(projectId)] || 'var(--chart-muted)';
- })();
-
  return <>
   {deleteError && <p role="alert" className="error">{deleteError}</p>}
   <div className="title-row">
@@ -303,38 +301,35 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
     const next = draft.id ? records.map(record => record.id === draft.id ? clean : record) : [...records, { ...clean, id: crypto.randomUUID() }];
     const saved = save(next);
     if (saved) setDraft(null);
+    if (saved && weekly && clean.date) { setWeek(mondayOf(clean.date)); setPerson(''); }
     return saved;
    }} />}
 
+  {weekly && <>
+   <WeekPicker monday={week} today={iso} onChange={monday => { setWeek(monday); setPerson(''); }} />
+   <WeekOverview data={data} monday={week} selected={person} onSelect={setPerson} />
+   <h2 className="week-lines">{person ? `Regels van ${data.personeel.find(p => p.id === person)?.name || 'deze medewerker'} in week ${weekNumber(week)}` : `Alle regels in week ${weekNumber(week)}`}</h2>
+  </>}
+
   <div className="tabs" role="tablist" aria-label="Filter op status">
-   <button role="tab" aria-selected={status === ''} onClick={() => setStatus('')}>Alle {records.length}</button>
+   <button role="tab" aria-selected={status === ''} onClick={() => setStatus('')}>Alle {scope.length}</button>
    {m.states.map(state => <button key={state} role="tab" aria-selected={status === state} onClick={() => setStatus(state)}>
-    {state} {records.filter(record => record.status === state).length}
+    {state} {scope.filter(record => record.status === state).length}
    </button>)}
   </div>
 
   <div className="toolbar">
    <input type="search" aria-label="Zoeken" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Zoek in ${m.title.toLowerCase()}`} />
-   <button onClick={() => { setQuery(''); setStatus(''); }}>Filters wissen</button>
-   <span className="count">{shown.length} van {plural(records.length, 'registratie', 'registraties')}</span>
+   <button onClick={() => { setQuery(''); setStatus(''); setPerson(''); }}>Filters wissen</button>
+   <span className="count">{shown.length} van {plural(scope.length, 'registratie', 'registraties')}</span>
   </div>
 
   {shown.length
-   ? id === 'urenstaten'
-    ? <div className="day-cards">
-     {days.map(day => <section key={day.date} className="card day-card" aria-label={day.date ? formatDateLong(day.date) : 'Zonder datum'}>
-      <header className="day-head">
-       <h2>{day.date ? capitalise(new Date(`${day.date}T00:00:00`).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : 'Zonder datum'}</h2>
-       <p><b>{formatDuration(day.total)}</b> gewerkt{day.pause > 0 && <> · {formatPause(day.pause)} pauze</>} · {plural(day.rows.length, 'regel', 'regels')}</p>
-      </header>
-      {day.total > 0 && <div className="day-split">
-       <span className="split" aria-hidden="true">{day.parts.map(part => <i key={part.projectId} style={{ flexGrow: part.minutes, background: tintOf(part.projectId) }} />)}</span>
-       <ul>{day.parts.map(part => <li key={part.projectId}><i style={{ background: tintOf(part.projectId) }} /><span>{part.name}</span><b>{formatDuration(part.minutes)}</b></li>)}</ul>
-      </div>}
-      {table(day.rows, columns.filter(field => field.key !== 'date'), `${m.title} ${day.date ? formatDate(day.date) : 'zonder datum'}`)}
-     </section>)}
-    </div>
+   ? weekly
+    ? <section className="card day-card" aria-label="Regels in deze week">{table(shown, columns, m.title)}</section>
     : table(shown, columns, m.title)
+   : weekly && records.length && !scope.length
+    ? <p className="empty-line">{person ? 'Deze medewerker heeft in deze week geen uren geschreven.' : 'In deze week zijn geen uren geschreven.'}</p>
    : records.length
     ? <p className="empty-line">Geen resultaten voor deze zoekterm of status. <button type="button" className="text-action" onClick={() => { setQuery(''); setStatus(''); }}>Wis de filters</button></p>
     : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => setDraft(blank())}>Voeg de eerste toe</button></p>}

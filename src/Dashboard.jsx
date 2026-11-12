@@ -162,6 +162,7 @@ export default function Dashboard({ data }) {
   { name: 'Concept', label: 'Concept', count: count('Concept'), color: 'var(--chart-muted)' },
   { name: 'Ingediend', label: 'Te beoordelen', count: count('Ingediend'), color: 'var(--chart-2)' },
   { name: 'Goedgekeurd', label: 'Goedgekeurd', count: count('Goedgekeurd'), color: 'var(--chart-3)' },
+  { name: 'Afgekeurd', label: 'Afgekeurd', count: count('Afgekeurd'), color: 'var(--negative)' },
  ];
  const running = data.projecten.filter(project => project.status === 'In uitvoering');
  const starting = data.projecten.filter(project => project.status === 'Planning');

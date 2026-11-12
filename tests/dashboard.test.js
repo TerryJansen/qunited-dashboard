@@ -73,10 +73,18 @@ test('the hours card adds up the week, shows a day per project and compares with
  await card.getByRole('button',{name:'Vorige week'}).click();
  await expect(card.getByTestId('hours-total')).toHaveText('8u');
  await card.getByRole('link',{name:'Bekijk de urenstaten'}).click();
- // de urenstaten staan per dag in een kaart, met het dagtotaal erboven
- const day=page.getByRole('region',{name:new RegExp(String(monday.getFullYear()))}).first();
- await expect(day).toContainText('9u 36min');
- await expect(day.locator('tbody').getByRole('row')).toHaveCount(2);
+ // de urenstaten openen op deze week: per medewerker de uren per status, daaronder de losse regels
+ const overview=page.getByRole('table',{name:'Uren per medewerker'});
+ const ada=overview.locator('tbody').getByRole('row').filter({hasText:'Ada'});
+ await expect(ada.getByRole('cell').nth(2)).toHaveText('09:36');
+ await expect(ada.getByRole('cell').nth(6)).toHaveText('09:36');
+ await expect(ada.getByTestId('week-total')).toHaveText('09:36');
+ await expect(page.getByRole('table',{name:'Urenstaten'}).locator('tbody').getByRole('row')).toHaveCount(2);
+ await page.getByRole('button',{name:'Vorige week'}).click();
+ await expect(ada.getByRole('cell').nth(4)).toHaveText('08:00');
+ await expect(page.getByRole('table',{name:'Urenstaten'}).locator('tbody').getByRole('row')).toHaveCount(1);
+ await page.getByRole('button',{name:'Vandaag'}).click();
+ await expect(ada.getByRole('cell').nth(2)).toHaveText('09:36');
 });
 
 test('on a phone the dashboard cards fit the screen',async({browser})=>{
