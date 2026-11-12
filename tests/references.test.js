@@ -5,7 +5,7 @@ test('existing v1 data upgrades without losing records; timesheets guide empty r
  const legacy=emptyData();delete legacy.urenstaten;legacy.projecten=[{id:'p',name:'Bestaand',status:'Planning'}];
  await seed(page,legacy);
  await expect(page.getByRole('alert')).toHaveCount(0);
- await expect(page.getByRole('table',{name:'Lopende en geplande projecten'})).toContainText('Bestaand');
+ await expect(page.getByRole('region',{name:'Lopende en geplande projecten'})).toContainText('Bestaand');
  await page.goto('/#/urenstaten');
  await expect(page.getByText('Voeg eerst medewerkers toe.')).toBeVisible();
  await page.getByRole('link',{name:'Medewerkers toevoegen'}).click();

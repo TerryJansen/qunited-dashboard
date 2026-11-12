@@ -114,7 +114,7 @@ test('today\'s list separate busy from available staff',async({page})=>{
  await expect(today.locator('li').first()).toContainText('Beschikbaar');
  await expect(today.locator('li').filter({hasText:'Ada'})).toContainText('Project A');
  // het filter op het kerncijfer laat alleen wie niet ingezet is staan
- await page.getByRole('button',{name:/Beschikbaar vandaag/}).click();
+ await page.getByRole('button',{name:'Alleen beschikbaar'}).click();
  await expect(today.locator('li')).toHaveCount(1);
 });
 

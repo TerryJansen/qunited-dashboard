@@ -11,12 +11,14 @@ import Assistant from './Assistant';
 import Planning from './Planning';
 import Login from './Login';
 import Logo from './Logo';
+import Icon from './Icon';
 import { signedIn, signOut } from './session';
 import Attachments, { getAttachments } from './Attachments';
 import { getProjectDocuments } from './files';
 import Detail from './Detail';
 import RecordForm from './RecordForm';
-import { money, formatDate, plural, number } from './format';
+import { money, formatDate, formatDateLong, plural, number } from './format';
+import { formatDuration } from './hours';
 import { formatHours, formatPause } from './TimeWheel';
 import { isoToday } from './alerts';
 import { requestPersistence } from './persist';
@@ -92,15 +94,15 @@ function App() {
    <nav aria-label="Hoofdnavigatie">
     {navigation().map(([group, keys]) => <React.Fragment key={group}>
      <p className="nav-group">{group}</p>
-     {keys.map(key => <a key={key} href={`#/${key}`} aria-current={page === key ? 'page' : undefined}>{labelOf(key)}</a>)}
+     {keys.map(key => <a key={key} href={`#/${key}`} aria-current={page === key ? 'page' : undefined}><Icon name={key} /><span>{labelOf(key)}</span></a>)}
     </React.Fragment>)}
    </nav>
    <div className="bottom">
     <nav aria-label="Beheer">
-     <a href="#/backup" aria-current={page === 'backup' ? 'page' : undefined}>Back-up</a>
-     <a href="#/hulp" aria-current={page === 'hulp' ? 'page' : undefined}>Hulp</a>
+     <a href="#/backup" aria-current={page === 'backup' ? 'page' : undefined}><Icon name="backup" /><span>Back-up</span></a>
+     <a href="#/hulp" aria-current={page === 'hulp' ? 'page' : undefined}><Icon name="hulp" /><span>Hulp</span></a>
     </nav>
-    <button type="button" className="sign-out" onClick={() => { signOut(); setInside(false); }}>Uitloggen</button>
+    <button type="button" className="sign-out" onClick={() => { signOut(); setInside(false); }}><Icon name="uit" /><span>Uitloggen</span></button>
    </div>
   </aside>
 
@@ -214,6 +216,55 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
  }
  const numeric = field => ['number', 'date', 'duration', 'pause'].includes(field.type) || field.key === 'amount';
 
+ const table = (rows, cols, label) => <div className="table-wrap"><table aria-label={label}>
+    <thead><tr>
+     <th>{m.identityLabel || 'Naam'}</th>
+     {cols.map(field => <th key={field.key} className={numeric(field) ? 'n' : undefined}>{field.label}</th>)}
+     <th>Status</th>
+     <th className="n">Actie</th>
+    </tr></thead>
+    <tbody>
+     {rows.map(record => <React.Fragment key={record.id}>
+      <tr className={openFiles === record.id ? 'expanded' : undefined}>
+       <td className="identity">
+        <a href={`#/${id}/${record.id}`}>{titleOf(id, record, data)}</a>
+        {subText(id, record, data) && <span className="sub">{subText(id, record, data)}</span>}
+       </td>
+       {cols.map(field => <td key={field.key} data-label={field.label} className={numeric(field) ? 'n num' : undefined}>{cell(field, record)}</td>)}
+       <td><span className={`pill ${statusTone(id, record, iso)}`}>{record.status}</span></td>
+       <td>
+        <div className="row-actions">
+         {id === 'personeel' && <button className="text-action" onClick={() => setOpenFiles(open => open === record.id ? '' : record.id)}>
+          {openFiles === record.id ? 'Bestanden sluiten' : 'Bestanden'}
+         </button>}
+         <button className="text-action" onClick={() => { setDraft({ ...record }); scrollTo(0, 0); }}>Bewerken</button>
+         <button className="text-action danger" onClick={() => remove(record)}>Verwijderen</button>
+        </div>
+       </td>
+      </tr>
+      {id === 'personeel' && openFiles === record.id && <tr className="detail-row">
+       <td colSpan={cols.length + 3}><Attachments personId={record.id} /></td>
+      </tr>}
+     </React.Fragment>)}
+    </tbody>
+   </table></div>;
+
+ // Urenstaten per dag: bovenaan het totaal en de verdeling over de projecten, daaronder de regels.
+ const TINTS = ['var(--lime)', 'var(--chart-2)', 'var(--navy)'];
+ const days = id === 'urenstaten' ? [...new Set(shown.map(record => record.date || ''))].sort().reverse().map(date => {
+  const rows = shown.filter(record => (record.date || '') === date);
+  const perProject = new Map();
+  for (const record of rows) perProject.set(record.projectId || '', (perProject.get(record.projectId || '') || 0) + Math.round(Number(record.hours) * 60 || 0));
+  const parts = [...perProject].filter(([, minutes]) => minutes > 0).sort((x, y) => y[1] - x[1])
+   .map(([projectId, minutes]) => ({ projectId, minutes, name: data.projecten.find(project => project.id === projectId)?.name || 'Zonder project' }));
+  return { date, rows, parts, total: parts.reduce((sum, part) => sum + part.minutes, 0),
+   pause: rows.reduce((sum, record) => sum + (Number(record.pause) || 0), 0) };
+ }) : [];
+ const tintOf = (() => {
+  const order = [...new Set(days.flatMap(day => day.parts.map(part => part.projectId)))];
+  return projectId => TINTS[order.indexOf(projectId)] || 'var(--chart-muted)';
+ })();
+
  return <>
   {deleteError && <p role="alert" className="error">{deleteError}</p>}
   <div className="title-row">
@@ -258,38 +309,21 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
   </div>
 
   {shown.length
-   ? <div className="table-wrap"><table aria-label={m.title}>
-    <thead><tr>
-     <th>{m.identityLabel || 'Naam'}</th>
-     {columns.map(field => <th key={field.key} className={numeric(field) ? 'n' : undefined}>{field.label}</th>)}
-     <th>Status</th>
-     <th className="n">Actie</th>
-    </tr></thead>
-    <tbody>
-     {shown.map(record => <React.Fragment key={record.id}>
-      <tr className={openFiles === record.id ? 'expanded' : undefined}>
-       <td className="identity">
-        <a href={`#/${id}/${record.id}`}>{titleOf(id, record, data)}</a>
-        {subText(id, record, data) && <span className="sub">{subText(id, record, data)}</span>}
-       </td>
-       {columns.map(field => <td key={field.key} className={numeric(field) ? 'n num' : undefined}>{cell(field, record)}</td>)}
-       <td><span className={`pill ${statusTone(id, record, iso)}`}>{record.status}</span></td>
-       <td>
-        <div className="row-actions">
-         {id === 'personeel' && <button className="text-action" onClick={() => setOpenFiles(open => open === record.id ? '' : record.id)}>
-          {openFiles === record.id ? 'Bestanden sluiten' : 'Bestanden'}
-         </button>}
-         <button className="text-action" onClick={() => { setDraft({ ...record }); scrollTo(0, 0); }}>Bewerken</button>
-         <button className="text-action danger" onClick={() => remove(record)}>Verwijderen</button>
-        </div>
-       </td>
-      </tr>
-      {id === 'personeel' && openFiles === record.id && <tr className="detail-row">
-       <td colSpan={columns.length + 3}><Attachments personId={record.id} /></td>
-      </tr>}
-     </React.Fragment>)}
-    </tbody>
-   </table></div>
+   ? id === 'urenstaten'
+    ? <div className="day-cards">
+     {days.map(day => <section key={day.date} className="card day-card" aria-label={day.date ? formatDateLong(day.date) : 'Zonder datum'}>
+      <header className="day-head">
+       <h2>{day.date ? capitalise(new Date(`${day.date}T00:00:00`).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : 'Zonder datum'}</h2>
+       <p><b>{formatDuration(day.total)}</b> gewerkt{day.pause > 0 && <> · {formatPause(day.pause)} pauze</>} · {plural(day.rows.length, 'regel', 'regels')}</p>
+      </header>
+      {day.total > 0 && <div className="day-split">
+       <span className="split" aria-hidden="true">{day.parts.map(part => <i key={part.projectId} style={{ flexGrow: part.minutes, background: tintOf(part.projectId) }} />)}</span>
+       <ul>{day.parts.map(part => <li key={part.projectId}><i style={{ background: tintOf(part.projectId) }} /><span>{part.name}</span><b>{formatDuration(part.minutes)}</b></li>)}</ul>
+      </div>}
+      {table(day.rows, columns.filter(field => field.key !== 'date'), `${m.title} ${day.date ? formatDate(day.date) : 'zonder datum'}`)}
+     </section>)}
+    </div>
+    : table(shown, columns, m.title)
    : records.length
     ? <p className="empty-line">Geen resultaten voor deze zoekterm of status. <button type="button" className="text-action" onClick={() => { setQuery(''); setStatus(''); }}>Wis de filters</button></p>
     : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => setDraft(blank())}>Voeg de eerste toe</button></p>}

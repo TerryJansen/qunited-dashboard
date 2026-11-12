@@ -59,7 +59,7 @@ test('absence keeps someone out of the available count and off the missing-times
   personeel:[{id:'e1',name:'Ada',status:'Actief'},{id:'e2',name:'Bram',status:'Actief'}],
   afwezigheid:[{id:'a1',name:'Bram — Vakantie',status:'Vastgelegd',employeeId:'e2',kind:'Vakantie',start:day(-2),end:day(5)}]});
  await expect(page.getByTestId('available-count')).toHaveText('1');
- await expect(page.getByLabel('Kerncijfers')).toContainText('1 medewerker afwezig');
+ await expect(page.getByLabel('Bezetting vandaag')).toContainText('1 medewerker afwezig');
 });
 
 test('an expiring certificate becomes an action for its employee',async({page})=>{
