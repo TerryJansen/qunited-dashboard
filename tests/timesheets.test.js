@@ -121,10 +121,40 @@ test('the week overview adds up per status and kind, compares with contract hour
  await expect(ada.getByRole('cell')).toHaveText(['400428','Ada','00:00','00:00','32:00','08:00','08:00','32:00','20%','40:00 / 40:00']);
  await expect(rows.filter({hasText:'Bram'}).getByTestId('week-total')).toHaveText('00:00');
  await expect(page.getByText('Toont 1 tot 2 van 2 rijen')).toBeVisible();
- // klik op de naam: alleen de regels van die medewerker
- await rows.filter({hasText:'Bram'}).getByRole('button',{name:'Bram'}).click();
- await expect(page.getByText('Deze medewerker heeft in deze week geen uren geschreven.')).toBeVisible();
- await ada.getByRole('button',{name:'Ada'}).click();
+ // klik op de naam: het weekvenster van die medewerker, met per dag de regels
+ await ada.getByRole('button',{name:/Ada/}).click();
+ const dialog=page.getByRole('dialog');
+ await expect(dialog.getByRole('heading',{name:'Ada'})).toBeVisible();
+ await expect(dialog.getByTestId('dialog-total')).toHaveText('40:00');
+ const monday=dialog.getByRole('region',{name:'maandag 02 november'});
+ await expect(monday).toContainText('Totaal: 32:00');
+ await expect(monday).toContainText('Project A');
+ // uren invullen op woensdag: project, kopje, begintijd en uren
+ const wednesday=dialog.getByRole('region',{name:'woensdag 04 november'});
+ await wednesday.getByRole('button',{name:/Uren toevoegen op woensdag/}).click();
+ await wednesday.getByRole('button',{name:'Opslaan'}).click();
+ await expect(wednesday.getByRole('alert')).toContainText('Kies een project');
+ await wednesday.getByLabel('Project').selectOption('p1');
+ await wednesday.getByLabel('Kopje').fill('Inspectie');
+ await wednesday.getByLabel('Begintijd').fill('07:00');
+ await wednesday.getByRole('button',{name:'Opslaan'}).click();
+ await expect(wednesday).toContainText('Totaal: 08:00');
+ await expect(wednesday).toContainText('07:00');
+ await expect(wednesday).toContainText('15:30');
+ await expect(wednesday).toContainText('Inspectie');
+ await expect(dialog.getByTestId('dialog-total')).toHaveText('48:00');
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('qunited.records.v1')).urenstaten.at(-1));
+ expect(stored).toMatchObject({employeeId:'e1',projectId:'p1',date:'2026-11-04',hours:'8',pause:'30',activity:'Inspectie',from:'07:00',status:'Concept',kind:'Facturabel',name:'Inspectie'});
+ // wijzigen en verwijderen in het venster
+ await wednesday.getByRole('button',{name:'Bewerken'}).click();
+ await wednesday.getByLabel('Omschrijving').fill('Ketel 3');
+ await wednesday.getByRole('button',{name:'Opslaan'}).click();
+ await expect(wednesday).toContainText('Ketel 3');
+ page.once('dialog',d=>d.accept());
+ await wednesday.getByRole('button',{name:'Verwijderen'}).click();
+ await expect(dialog.getByTestId('dialog-total')).toHaveText('40:00');
+ await dialog.getByRole('button',{name:'Sluiten',exact:true}).last().click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect(row(page,'Maandag')).toBeVisible();
  await expect(row(page,'Andere week')).toHaveCount(0);
  // zoeken en sorteren

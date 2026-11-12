@@ -20,7 +20,7 @@ import RecordForm from './RecordForm';
 import { money, formatDate, plural, number } from './format';
 import { mondayOf } from './hours';
 import { weekNumber } from './agenda';
-import { WeekPicker, WeekOverview, inWeek } from './Timesheets';
+import { WeekPicker, WeekOverview, WeekDialog, inWeek } from './Timesheets';
 import { formatHours, formatPause } from './TimeWheel';
 import { isoToday } from './alerts';
 import { requestPersistence } from './persist';
@@ -166,10 +166,10 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
   const latest = fromStatus && records.filter(record => record.status === fromStatus && record.date).map(record => record.date).sort().pop();
   return mondayOf(latest || iso);
  });
- const [person, setPerson] = useState('');
+ const [person, setPerson] = useState(null);
  // De gekozen week staat in het adres, zodat hij na verversen blijft staan.
  const setWeek = monday => { setWeekState(monday); history.replaceState(null, '', `#/urenstaten?week=${monday}`); };
- const scope = weekly ? records.filter(record => inWeek(record, week) && (!person || (record.employeeId || '') === person)) : records;
+ const scope = weekly ? records.filter(record => inWeek(record, week)) : records;
 
  // Modules waarnaar deze module verwijst en die nog leeg zijn: zonder die gegevens valt er niets te kiezen.
  const missing = [...new Set(m.fields.filter(field => field.source && field.required).map(field => field.source))].filter(source => !data[source].length);
@@ -301,14 +301,18 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
     const next = draft.id ? records.map(record => record.id === draft.id ? clean : record) : [...records, { ...clean, id: crypto.randomUUID() }];
     const saved = save(next);
     if (saved) setDraft(null);
-    if (saved && weekly && clean.date) { setWeek(mondayOf(clean.date)); setPerson(''); }
+    if (saved && weekly && clean.date) setWeek(mondayOf(clean.date));
     return saved;
    }} />}
 
   {weekly && <>
-   <WeekPicker monday={week} today={iso} onChange={monday => { setWeek(monday); setPerson(''); }} />
+   <WeekPicker monday={week} today={iso} onChange={setWeek} />
    <WeekOverview data={data} monday={week} selected={person} onSelect={setPerson} />
-   <h2 className="week-lines">{person ? `Regels van ${data.personeel.find(p => p.id === person)?.name || 'deze medewerker'} in week ${weekNumber(week)}` : `Alle regels in week ${weekNumber(week)}`}</h2>
+   <h2 className="week-lines">Alle regels in week {weekNumber(week)}</h2>
+   {person !== null && <WeekDialog data={data} personId={person} monday={week} today={iso}
+    onWeek={setWeek} onClose={() => setPerson(null)}
+    onSave={line => save(line.id ? records.map(record => record.id === line.id ? line : record) : [...records, { ...line, id: crypto.randomUUID() }])}
+    onRemove={line => { if (confirm(`“${titleOf(id, line, data)}” verwijderen? Dit kan niet ongedaan worden gemaakt.`)) save(records.filter(record => record.id !== line.id)); }} />}
   </>}
 
   <div className="tabs" role="tablist" aria-label="Filter op status">
@@ -320,7 +324,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
 
   <div className="toolbar">
    <input type="search" aria-label="Zoeken" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Zoek in ${m.title.toLowerCase()}`} />
-   <button onClick={() => { setQuery(''); setStatus(''); setPerson(''); }}>Filters wissen</button>
+   <button onClick={() => { setQuery(''); setStatus(''); }}>Filters wissen</button>
    <span className="count">{shown.length} van {plural(scope.length, 'registratie', 'registraties')}</span>
   </div>
 
@@ -329,7 +333,7 @@ function Module({ id, data, records, save, openNew, fromStatus = '', fromQuery =
     ? <section className="card day-card" aria-label="Regels in deze week">{table(shown, columns, m.title)}</section>
     : table(shown, columns, m.title)
    : weekly && records.length && !scope.length
-    ? <p className="empty-line">{person ? 'Deze medewerker heeft in deze week geen uren geschreven.' : 'In deze week zijn geen uren geschreven.'}</p>
+    ? <p className="empty-line">In deze week zijn geen uren geschreven. Klik hierboven op een naam om uren in te vullen.</p>
    : records.length
     ? <p className="empty-line">Geen resultaten voor deze zoekterm of status. <button type="button" className="text-action" onClick={() => { setQuery(''); setStatus(''); }}>Wis de filters</button></p>
     : <p className="empty-line">Nog geen registraties. <button type="button" className="text-action" onClick={() => setDraft(blank())}>Voeg de eerste toe</button></p>}
